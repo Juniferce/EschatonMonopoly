@@ -2358,7 +2358,26 @@
             label.innerText = player;
             const value = document.createElement('div');
             value.className = 'sentence-group';
-            value.innerText = deviceId ? deviceId.substring(0, 10) + '...' : 'OFFLINE';
+            
+            if (deviceId) {
+              value.innerText = deviceId.substring(0, 10) + '... ';
+              const unlinkBtn = document.createElement('button');
+              unlinkBtn.className = 'danger';
+              unlinkBtn.style.padding = '2px 6px';
+              unlinkBtn.style.fontSize = '9px';
+              unlinkBtn.innerText = 'UNLINK';
+              unlinkBtn.onclick = () => {
+                if (confirm(`Force unlink device for ${player}?`)) {
+                  update(ref(realtimeDb), {
+                    [`players/deviceMapping/${player}`]: "",
+                    [`players/playersConnected/${player}`]: false
+                  });
+                }
+              };
+              value.appendChild(unlinkBtn);
+            } else {
+              value.innerText = 'OFFLINE';
+            }
             row.appendChild(label);
             row.appendChild(value);
             devicesPlayersContent.appendChild(row);

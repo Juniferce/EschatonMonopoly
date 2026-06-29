@@ -135,6 +135,10 @@
           <div class="deed-body">
             <div class="question-text">Who's playing?</div>
             <div class="options-container" id="login-options"></div>
+            <div style="margin-top: 25px; display: flex; gap: 10px; justify-content: center; border-top: 1px dashed #333; padding-top: 15px;">
+              <button id="btn-reset-device" style="background: transparent; color: #555; border: 1px dashed #333; padding: 4px 8px; font-size: 10px; cursor: pointer; text-transform: uppercase;">Reset Device ID</button>
+              <button id="btn-change-device" style="background: transparent; color: #555; border: 1px dashed #333; padding: 4px 8px; font-size: 10px; cursor: pointer; text-transform: uppercase;">Change Device ID</button>
+            </div>
           </div>
         </div>
       </div>
@@ -181,6 +185,30 @@
       }, 50);
     });
 
+    // Setup local device adjustment buttons in login card
+    const resetDeviceBtn = document.getElementById('btn-reset-device');
+    const changeDeviceBtn = document.getElementById('btn-change-device');
+    if (resetDeviceBtn) {
+      resetDeviceBtn.onclick = () => {
+        if (confirm("Reset local Device ID? This will generate a fresh clean identity for this tab.")) {
+          localStorage.removeItem('deviceId');
+          localStorage.removeItem('playerIdentity');
+          window.location.reload();
+        }
+      };
+    }
+    if (changeDeviceBtn) {
+      changeDeviceBtn.onclick = () => {
+        const currentId = localStorage.getItem('deviceId') || '';
+        const newId = prompt("Enter custom Device ID:", currentId);
+        if (newId !== null && newId.trim() !== '') {
+          localStorage.setItem('deviceId', newId.trim());
+          localStorage.removeItem('playerIdentity');
+          window.location.reload();
+        }
+      };
+    }
+
     // --- PHASE 1: REALTIME DATABASE PRESENCE UI ---
     const presenceRef = ref(realtimeDb, 'players');
 
@@ -202,10 +230,6 @@
           btn.innerText = playerName;
           
           btn.onclick = () => {
-            // Extra safety: block the click entirely if it's already mapped to someone else
-            const isMapped = deviceMapping[playerName] && deviceMapping[playerName] !== "";
-            if (isMapped && localPlayer !== playerName) return; 
-
             activatePlayerPresence(playerName);
             revealAndScrollToNext(0);
           };
@@ -215,14 +239,9 @@
 
         // Reset classes for dynamic updating
         btn.className = 'monopoly-btn'; 
-        
-        // Determine if this specific player is actively tethered to a device
-        const isMapped = deviceMapping[playerName] && deviceMapping[playerName] !== "";
 
         if (localPlayer === playerName) {
           btn.classList.add('selected-option'); // It's you
-        } else if (isMapped) {
-          btn.classList.add('disabled-option'); // Someone else's device claimed this
         }
       });
     });
@@ -349,6 +368,12 @@
 
           // Crucial: merge preserves other fields (other players' answers) in the document
           await setDoc(firestoreDocRef, dynamicPayload, { merge: true });
+
+          // 2. Change global game stage state to 'waiting' in the Realtime Database
+          // This satisfies stage-manager.js rules for routing to lobby.html
+          await update(ref(realtimeDb), {
+            "gameState/stage": "waiting"
+          });
 
           console.log(`Answers recorded under key "${playerIdentity}" inside quiz/results!`);
 

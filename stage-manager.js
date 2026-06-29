@@ -3,13 +3,12 @@ import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebas
 
 // 1. Export the Master Manifest globally so other files can read it
 export const STAGE_MANIFEST = {
-  "locked": ["index.html"],
-  "lobby": ["lobby.html", "quiz.html"], // Changed to waiting to match your terminology
+  "locked": [""],
+  "lobby": ["lobby.html", "quiz"], // Changed to waiting to match your terminology
   "attunement": ["attunement.html"],
-  "wager": ["wager.html"],
-  "encounter": ["encounter.html"],
-  "resolution": ["resolution.html"],
-  "adaptation": ["adaptation.html"],
+  "wager": ["wager"],
+  "encounter": ["encounter"],
+  "adaptation": ["adaptation"],
 };
 
 // 2. Automatically generate the dropdown list for the controller
