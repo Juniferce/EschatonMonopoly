@@ -350,12 +350,6 @@
           // Crucial: merge preserves other fields (other players' answers) in the document
           await setDoc(firestoreDocRef, dynamicPayload, { merge: true });
 
-          // 2. Change global game stage state to 'waiting' in the Realtime Database
-          // This satisfies stage-manager.js rules for routing to lobby.html
-          await update(ref(realtimeDb), {
-            "gameState/stage": "waiting"
-          });
-
           console.log(`Answers recorded under key "${playerIdentity}" inside quiz/results!`);
 
           // 3. Hand off the routing to the page transition
