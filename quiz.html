@@ -154,14 +154,14 @@
 
     // 1. Explicitly Untether Device on Quiz Load
     async function untetherDevice() {
-      const player = sessionStorage.getItem('playerIdentity');
+      const player = localStorage.getItem('playerIdentity');
       if (player) {
         const updates = {};
         updates[`players/playersConnected/${player}`] = false;
         updates[`players/deviceMapping/${player}`] = ""; 
         
         await update(ref(realtimeDb), updates);
-        sessionStorage.removeItem('playerIdentity');
+        localStorage.removeItem('playerIdentity');
         console.log(`Device untethered from ${player}. Free to select a new player.`);
       }
     }
@@ -189,7 +189,7 @@
       const connected = data.playersConnected || {}; 
       const deviceMapping = data.deviceMapping || {}; // <-- Pull device mappings
       const optionsContainer = document.getElementById('login-options');
-      const localPlayer = sessionStorage.getItem('playerIdentity');
+      const localPlayer = localStorage.getItem('playerIdentity');
       
       // We still iterate over 'connected' just to get the full roster of player names
       Object.keys(connected).forEach(playerName => {
@@ -328,7 +328,7 @@
       // --- SUBMISSION LOGIC ---
       const submitBtn = document.getElementById('submit-quiz-btn');
       submitBtn.onclick = async () => {
-        const playerIdentity = sessionStorage.getItem('playerIdentity');
+        const playerIdentity = localStorage.getItem('playerIdentity');
         
         if (!playerIdentity) {
           alert("Whoops! No active player identity found. Please scroll to the top and select a player.");

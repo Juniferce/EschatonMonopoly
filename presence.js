@@ -35,7 +35,7 @@ export function initializePresence() {
 
       // Fallback to local storage if they temporarily dropped off the DB mapping
       if (!recognizedPlayer) {
-        recognizedPlayer = sessionStorage.getItem('playerIdentity');
+        recognizedPlayer = localStorage.getItem('playerIdentity');
       }
 
       // If we know who they are, activate their presence
@@ -48,7 +48,7 @@ export function initializePresence() {
 
 // 3. The Activation Function (Fired automatically, or manually when a new user logs in)
 export function activatePlayerPresence(playerName) {
-  sessionStorage.setItem('playerIdentity', playerName);
+  localStorage.setItem('playerIdentity', playerName);
   
   const playerRef = ref(realtimeDb, `players/playersConnected/${playerName}`);
   const deviceRef = ref(realtimeDb, `players/deviceMapping/${playerName}`);
@@ -65,14 +65,14 @@ export function activatePlayerPresence(playerName) {
 export { deviceId };
 
 export function forcePlayerOffline() {
-  const player = sessionStorage.getItem('playerIdentity');
+  const player = localStorage.getItem('playerIdentity');
   if (player) {
     // 1. Set the specific player node to false (offline)
     const playerRef = ref(realtimeDb, `players/playersConnected/${player}`);
     set(playerRef, false);
     
     // 2. Clear local storage so they aren't remembered as logged in
-    sessionStorage.removeItem('playerIdentity');
+    localStorage.removeItem('playerIdentity');
     
     console.log(`Player ${player} has been untied and set to offline.`);
   }
