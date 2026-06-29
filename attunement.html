@@ -164,7 +164,7 @@
 
     async function verifyAccess() {
       const localDeviceId = localStorage.getItem('deviceId');
-     // if (!localDeviceId) { window.location. = 'index.html'; return; }
+     // if (!localDeviceId) { .location. = 'index.html'; return; }
 
       try {
         const mappingSnap = await get(ref(realtimeDb, 'players/deviceMapping'));
@@ -172,7 +172,7 @@
         for (const [playerName, mappedId] of Object.entries(mapping)) {
           if (mappedId === localDeviceId) { localPlayer = playerName; break; }
         }
-        if (!localPlayer) { window.location. = 'index.html'; return; }
+        //if (!localPlayer) { window.location. = 'index.html'; return; }
         igniteAttunement();
       } catch (error) { console.error("Gatekeeper error: ", error); }
     }
