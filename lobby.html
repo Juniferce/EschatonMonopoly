@@ -231,7 +231,7 @@
 
     // --- 0. QUIZ COMPLETION GATEKEEPER ---
     async function verifyAccess() {
-      const localDeviceId = localStorage.getItem('deviceId');
+      const localDeviceId = sessionStorage.getItem('deviceId');
 
       if (!localDeviceId) {
         window.location.href = 'quiz.html'; 

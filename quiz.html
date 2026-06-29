@@ -154,14 +154,14 @@
 
     // 1. Explicitly Untether Device on Quiz Load
     async function untetherDevice() {
-      const player = localStorage.getItem('playerIdentity');
+      const player = sessionStorage.getItem('playerIdentity');
       if (player) {
         const updates = {};
         updates[`players/playersConnected/${player}`] = false;
         updates[`players/deviceMapping/${player}`] = ""; 
         
         await update(ref(realtimeDb), updates);
-        localStorage.removeItem('playerIdentity');
+        sessionStorage.removeItem('playerIdentity');
         console.log(`Device untethered from ${player}. Free to select a new player.`);
       }
     }
@@ -189,7 +189,7 @@
       const connected = data.playersConnected || {}; 
       const deviceMapping = data.deviceMapping || {}; // <-- Pull device mappings
       const optionsContainer = document.getElementById('login-options');
-      const localPlayer = localStorage.getItem('playerIdentity');
+      const localPlayer = sessionStorage.getItem('playerIdentity');
       
       // We still iterate over 'connected' just to get the full roster of player names
       Object.keys(connected).forEach(playerName => {
@@ -328,7 +328,7 @@
       // --- SUBMISSION LOGIC ---
       const submitBtn = document.getElementById('submit-quiz-btn');
       submitBtn.onclick = async () => {
-        const playerIdentity = localStorage.getItem('playerIdentity');
+        const playerIdentity = sessionStorage.getItem('playerIdentity');
         
         if (!playerIdentity) {
           alert("Whoops! No active player identity found. Please scroll to the top and select a player.");
@@ -349,6 +349,12 @@
 
           // Crucial: merge preserves other fields (other players' answers) in the document
           await setDoc(firestoreDocRef, dynamicPayload, { merge: true });
+
+          // 2. Change global game stage state to 'waiting' in the Realtime Database
+          // This satisfies stage-manager.js rules for routing to lobby.html
+          await update(ref(realtimeDb), {
+            "gameState/stage": "waiting"
+          });
 
           console.log(`Answers recorded under key "${playerIdentity}" inside quiz/results!`);
 
@@ -382,4 +388,3 @@
 </script>
   </body>
 </html>
-

@@ -254,7 +254,7 @@
 
     // Stage gate access verification
     async function verifyAccess() {
-      const localDeviceId = localStorage.getItem('deviceId');
+      const localDeviceId = sessionStorage.getItem('deviceId');
       if (!localDeviceId) { window.location.href = 'index.html'; return; }
       try {
         const mappingSnap = await get(ref(realtimeDb, 'players/deviceMapping'));

@@ -163,8 +163,8 @@
     let resolutionTarget = null;
 
     async function verifyAccess() {
-      const localDeviceId = localStorage.getItem('deviceId');
-     // if (!localDeviceId) { .location. = 'index.html'; return; }
+      const localDeviceId = sessionStorage.getItem('deviceId');
+      if (!localDeviceId) { window.location.href = 'index.html'; return; }
 
       try {
         const mappingSnap = await get(ref(realtimeDb, 'players/deviceMapping'));
@@ -172,7 +172,7 @@
         for (const [playerName, mappedId] of Object.entries(mapping)) {
           if (mappedId === localDeviceId) { localPlayer = playerName; break; }
         }
-        //if (!localPlayer) { window.location. = 'index.html'; return; }
+        if (!localPlayer) { window.location.href = 'index.html'; return; }
         igniteAttunement();
       } catch (error) { console.error("Gatekeeper error: ", error); }
     }
@@ -462,7 +462,7 @@
         const image = document.createElementNS("http://www.w3.org/2000/svg", "image");
         image.setAttribute("x", textPos.x - iconRadius); image.setAttribute("y", textPos.y - iconRadius);
         image.setAttribute("width", iconRadius * 2); image.setAttribute("height", iconRadius * 2);
-        image.setAttribute("", `images/${planesData[planeName].image}`); image.setAttribute("clip-path", `url(#clip-${safeId})`);
+        image.setAttribute("href", `images/${planesData[planeName].image}`); image.setAttribute("clip-path", `url(#clip-${safeId})`);
 
         const hoverGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
         hoverGroup.setAttribute("class", "hover-content");
