@@ -238,6 +238,13 @@
         return;
       }
 
+      let localPlayer = localStorage.getItem('playerIdentity');
+      if (localPlayer) {
+        await assignLowestShard(localPlayer);
+        igniteLobby();
+        return;
+      }
+
       try {
         const mappingSnap = await get(ref(realtimeDb, 'players/deviceMapping'));
         const mappingData = mappingSnap.val() || {};

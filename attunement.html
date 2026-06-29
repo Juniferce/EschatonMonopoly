@@ -166,6 +166,12 @@
       const localDeviceId = localStorage.getItem('deviceId');
       if (!localDeviceId) { window.location.href = 'index.html'; return; }
 
+      localPlayer = localStorage.getItem('playerIdentity');
+      if (localPlayer) {
+        igniteAttunement();
+        return;
+      }
+
       try {
         const mappingSnap = await get(ref(realtimeDb, 'players/deviceMapping'));
         const mapping = mappingSnap.val() || {};

@@ -244,6 +244,17 @@
     async function verifyAccess() {
       const localDeviceId = localStorage.getItem('deviceId');
       if (!localDeviceId) { window.location.href = 'index.html'; return; }
+
+      localPlayer = localStorage.getItem('playerIdentity');
+      if (localPlayer) {
+        const shardMapSnap = await get(ref(realtimeDb, 'players/shardMapping'));
+        shardMap = shardMapSnap.val() || {};
+        for (const [shardId, playerName] of Object.entries(shardMap)) { if (playerName === localPlayer) { localShardId = shardId; break; } }
+        igniteNarrationEngine('narration-container');
+        if (localShardId) igniteDiceTray('dice-container', localShardId);
+        initializeWagerEngine();
+        return;
+      }
       try {
         const mappingSnap = await get(ref(realtimeDb, 'players/deviceMapping'));
         const mapping = mappingSnap.val() || {};
