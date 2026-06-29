@@ -5,7 +5,7 @@ import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebas
 export const STAGE_MANIFEST = {
   "locked": ["index"],
   "lobby": ["lobby", "quiz"], // Changed to waiting to match your terminology
-  "attunement": ["attunement.html"],
+  "attunement": ["attunement"],
   "wager": ["wager"],
   "encounter": ["encounter"],
   "adaptation": ["adaptation"],

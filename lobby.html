@@ -234,7 +234,7 @@
       const localDeviceId = localStorage.getItem('deviceId');
 
       if (!localDeviceId) {
-        window.location.href = 'quiz.html'; 
+        window.location.href = 'quiz'; 
         return;
       }
 
@@ -258,7 +258,7 @@
         }
 
         if (!localPlayer) {
-          window.location.href = 'quiz.html';
+          window.location.href = 'quiz';
           return;
         }
 
@@ -267,11 +267,11 @@
         if (resultsDoc.exists()) {
           const docData = resultsDoc.data();
           if (!docData[localPlayer]) {
-            window.location.href = 'quiz.html';
+            window.location.href = 'quiz';
             return;
           }
         } else {
-          window.location.href = 'quiz.html';
+          window.location.href = 'quiz';
           return;
         }
         
