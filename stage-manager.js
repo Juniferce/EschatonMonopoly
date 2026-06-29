@@ -22,11 +22,11 @@ export function initializeStageManager() {
 
   onValue(stageRef, (snapshot) => {
     const currentStage = snapshot.val(); 
-    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    const currentPage = window.location.pathname.split('/').pop() || 'index';
 
-    const permittedPages = STAGE_MANIFEST[currentStage] || ["index.html"];
+    const permittedPages = STAGE_MANIFEST[currentStage] || ["index"];
 
-    if (!permittedPages.includes(currentPage)) {
+    if ((!permittedPages.includes(currentPage)) && (currentPage != "index")) {
       console.log(`Stage "${currentStage}" does not permit access to ${currentPage}. Redirecting...`);
       window.location.href = permittedPages[0];
     }

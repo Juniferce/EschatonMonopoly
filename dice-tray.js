@@ -116,7 +116,7 @@ export function igniteDiceTray(containerId, shardId) {
     document.removeEventListener('mouseup', endDrag);
 
     if (droppedOnWager) {
-       // Fire global event so wager.html can pick it up!
+       // Fire global event so wager can pick it up!
        window.dispatchEvent(new CustomEvent('dieWagered', { 
            detail: { index: draggedIndex, size: originalSize } 
        }));
