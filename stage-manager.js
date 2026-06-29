@@ -26,7 +26,7 @@ export function initializeStageManager() {
 
     const permittedPages = STAGE_MANIFEST[currentStage] || ["index"];
 
-    if ((!permittedPages.includes(currentPage)) && (currentPage != "index")) {
+    if ((!permittedPages.includes(currentPage)) && (currentPage != "")) {
       console.log(`Stage "${currentStage}" does not permit access to ${currentPage}. Redirecting...`);
       window.location.href = permittedPages[0];
     }
