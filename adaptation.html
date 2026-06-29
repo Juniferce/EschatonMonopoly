@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eschaton - Adaptation</title>
+  <link rel="stylesheet" href="effects.css">
+  <script src="water-physics.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at center, #111 0%, #000 100%);
+      color: #fff; font-family: 'Arial', sans-serif;
+      height: 100vh; overflow: hidden; position: relative;
+      user-select: none; text-transform: uppercase;
+    }
+
+    .wiggle { animation: extremeWiggle 0.4s infinite linear !important; }
+
+    /* Layout Containers */
+    #header-bar {
+      position: absolute; top: 20px; left: 0; right: 0;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 40px; z-index: 50; pointer-events: none;
+    }
+    .interactive-header { pointer-events: auto; }
+
+    .hud-block {
+      background: rgba(0, 0, 0, 0.85); border: 2px solid #555;
+      border-radius: 8px; padding: 12px 20px; display: flex;
+      flex-direction: column; gap: 5px; box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+    }
+    .hud-title { font-size: 10px; color: #888; letter-spacing: 2px; font-weight: bold; }
+    .hud-val { font-size: 22px; font-weight: 900; letter-spacing: 1px; color: #00ff00; text-shadow: 0 0 10px rgba(0, 255, 0, 0.4); }
+
+    button.btn-adaptation {
+      background: #000; color: #ffaa00; border: 2px solid #ffaa00;
+      padding: 12px 24px; font-size: 13px; font-weight: bold; border-radius: 6px;
+      cursor: pointer; letter-spacing: 2px; transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(255, 170, 0, 0.15);
+    }
+    button.btn-adaptation:hover { background: #ffaa00; color: #000; box-shadow: 0 0 25px rgba(255, 170, 0, 0.4); }
+    button.btn-adaptation:disabled { opacity: 0.3; cursor: not-allowed; border-color: #333; color: #666; background: #111; box-shadow: none; }
+
+    /* Node Canvas Space */
+    #canvas-container {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: 5; overflow: hidden;
+    }
+    #edge-layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 6;
+    }
+
+    /* HTML Upgrade Nodes */
+    .upgrade-node {
+      position: absolute; width: 64px; height: 64px;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 10; transform: translate(-50%, -50%);
+      background: #111; border: 3px solid #555;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.8), inset 0 0 10px rgba(255,255,255,0.05);
+      transition: border-color 0.3s, transform 0.2s, box-shadow 0.3s;
+    }
+    .upgrade-node:hover { transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 20px var(--node-color, #fff); }
+    .upgrade-node.acquired { border-color: #00ff00 !important; box-shadow: 0 0 15px rgba(0, 255, 0, 0.5); }
+    .upgrade-node.origin { border-width: 4px; border-color: #ffaa00 !important; width: 72px; height: 72px; }
+    .upgrade-node.locked { filter: brightness(0.4); opacity: 0.5; }
+
+    .node-text { font-size: 10px; font-weight: bold; text-align: center; color: #ccc; pointer-events: none; z-index: 5; text-shadow: 0 2px 4px #000; }
+    .node-svg-shape { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+    .node-svg-shape path { fill: transparent; stroke: var(--node-color, #555); stroke-width: 6px; }
+
+    /* Pop-up Window Overlays */
+    #popup-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+      display: none; justify-content: center; align-items: center; z-index: 100;
+    }
+    .popup-deed {
+      background: #111; border: 4px solid var(--popup-color, #fff);
+      width: 90vw; max-width: 420px; text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    }
+    .popup-header {
+      background: var(--popup-color, #333); color: #fff;
+      padding: 16px; font-size: 16px; font-weight: 900;
+      letter-spacing: 2px; border-bottom: 4px solid #fff;
+    }
+    .popup-body { padding: 30px; display: flex; flex-direction: column; gap: 20px; }
+    .popup-desc { font-size: 13px; color: #ccc; line-height: 1.5; text-transform: none; }
+    .popup-cost { font-size: 14px; font-weight: bold; color: #ffaa00; letter-spacing: 1px; }
+    
+    /* Draining Confirm Purchase Button */
+    .btn-purchase-container { position: relative; width: 100%; height: 50px; overflow: hidden; border: 2px solid #555; }
+    .btn-purchase {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: transparent; color: #fff; border: none; font-size: 14px;
+      font-weight: bold; cursor: pointer; letter-spacing: 2px; z-index: 5;
+    }
+    .btn-purchase:disabled { color: #555; cursor: not-allowed; }
+    .purchase-drain-bar {
+      position: absolute; bottom: 0; left: 0; width: 100%; height: 100%;
+      background: #008b00; z-index: 1; transform-origin: bottom;
+      transition: transform 3s linear; transform: scaleY(0);
+    }
+    .purchase-drain-bar.draining { transform: scaleY(1); }
+
+    .btn-close-popup { background: #000; color: #888; border: 1px solid #333; padding: 10px; font-size: 11px; cursor: pointer; }
+    .btn-close-popup:hover { color: #fff; border-color: #666; }
+
+    /* Draggable Moves Dashboard Styles */
+    .move-chip {
+      background: #111; border: 2px solid #555; padding: 8px 12px; border-radius: 4px;
+      cursor: grab; font-size: 11px; font-weight: bold; white-space: nowrap; color: #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5); user-select: none;
+    }
+    .move-chip:active { cursor: grabbing; }
+  </style>
+</head>
+<body class="wiggle">
+
+  <svg width="0" height="0" style="position:absolute; z-index:-1;">
+    <defs>
+      <filter id="extreme-1"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="1" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+      <filter id="extreme-2"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="2" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+      <filter id="extreme-3"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="3" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+      <filter id="extreme-4"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="4" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+    </defs>
+  </svg>
+
+  <div id="header-bar">
+    <div class="hud-block interactive-header wiggle">
+      <div class="hud-title" id="hud-xp-label">SHARD XP</div>
+      <div class="hud-val" id="hud-xp-val">0</div>
+    </div>
+
+    <div style="display: flex; gap: 15px;" class="interactive-header">
+      <button id="btn-donate-body" class="btn-adaptation wiggle">DONATE XP TO BODY</button>
+      <button id="btn-complete-adaptation" class="btn-adaptation wiggle" style="border-color: #00ff00; color: #00ff00;">COMPLETE ADAPTATION</button>
+    </div>
+  </div>
+
+  <!-- Equipped and Known Moves Dashboard -->
+  <div id="moves-dashboard" style="position: absolute; bottom: 20px; left: 20px; right: 20px; height: 160px; background: rgba(0,0,0,0.85); border: 2px solid #555; border-radius: 8px; display: none; padding: 15px; gap: 20px; z-index: 50; pointer-events: auto;">
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; width: 50%;">
+      <div class="hud-title" id="equipped-moves-title">EQUIPPED MOVES (0/4)</div>
+      <div id="equipped-moves-list" style="display: flex; gap: 10px; overflow-x: auto; flex-grow: 1; padding: 10px; background: #000; border: 1px solid #333; align-items: center; border-radius: 4px;"></div>
+    </div>
+    <div style="width: 2px; background: #333; align-self: stretch;"></div>
+    <div style="flex: 1.5; display: flex; flex-direction: column; gap: 8px; width: 50%;">
+      <div class="hud-title">KNOWN MOVES (DRAG TO EQUIP)</div>
+      <div id="known-moves-list" style="display: flex; gap: 10px; overflow-x: auto; flex-grow: 1; padding: 10px; background: #000; border: 1px solid #333; align-items: center; border-radius: 4px;"></div>
+    </div>
+  </div>
+
+  <div id="canvas-container">
+    <svg id="edge-layer"></svg>
+    <div id="node-layer" style="position: absolute; top:0; left:0; width:100%; height:100%;"></div>
+  </div>
+
+  <!-- Detail Popup Overlay -->
+  <div id="popup-overlay">
+    <div class="popup-deed wiggle" id="popup-panel">
+      <div class="popup-header" id="popup-title">UPGRADE DETAILS</div>
+      <div class="popup-body">
+        <div class="popup-desc" id="popup-desc">This is an upgrade node description.</div>
+        <div class="popup-cost" id="popup-cost">COST: 1 XP</div>
+        
+        <div id="collective-input-container" style="display: none; flex-direction: column; gap: 5px; margin-bottom: 10px;">
+          <div class="hud-title" style="font-size: 11px;">CONTRIBUTION AMOUNT</div>
+          <div style="display: flex; gap: 10px; justify-content: center; align-items: center;">
+            <input type="number" id="collective-amount" value="1" min="1" style="width: 80px; text-align: center; background: #000; color: #fff; border: 1px solid #555; padding: 6px;">
+            <button id="btn-collective-max" class="btn-adaptation" style="padding: 4px 10px; font-size: 11px;">MAX</button>
+          </div>
+        </div>
+
+        <div class="btn-purchase-container" id="purchase-container">
+          <div class="purchase-drain-bar" id="drain-bar"></div>
+          <button class="btn-purchase" id="btn-learn-node">LEARN</button>
+        </div>
+        
+        <button class="btn-close-popup" id="btn-close-panel">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeStageManager } from './stage-manager.js';
+    import { initializePresence } from './presence.js';
+    import { realtimeDb, firestoreDb } from './firebase-config.js';
+    import { ref, get, update, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    initializeStageManager();
+    initializePresence();
+
+    let localPlayer = null;
+    let localShardId = null;
+    let localShardData = {};
+    let shardsData = {};
+    let planesConfig = {};
+    let allMovesData = {};
+    let currentPlane = 'karask';
+    let acquiredUpgrades = [];
+    let collectiveContributions = {};
+
+    // Nodes list for the physics loop
+    let physicsNodes = [];
+    let physicsConnections = [];
+    
+    // Hardcoded Upgrade Tree Maps (Templates)
+    const upgradeTrees = {
+      karask: {
+        color: '#888888',
+        nodes: {
+          origin: { title: "Origin", desc: "The core anchor of the Karask's undivided presence.", cost: 0, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: ["adapt1", "adapt2"] },
+          adapt1: { title: "Resilience", desc: "Allows the Karask to shrug off minor structural interference.", cost: 1, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: ["adapt3"] },
+          adapt2: { title: "Focus", desc: "Speeds up the roll processing frequency of ready dice.", cost: 1, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: ["adapt4"] },
+          adapt3: { title: "Overdrive", desc: "Provides temporary resistance to locked conditions when heavily damaged.", cost: 2, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: [] },
+          adapt4: { title: "Shatter", desc: "Enables explosive resolution values to bleed into adjacent slots.", cost: 2, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: [] }
+        }
+      },
+      abyss: {
+        color: '#ff4444',
+        nodes: {
+          origin: { title: "Origin", desc: "The crushing gravity of the absolute depths.", cost: 0, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: ["abyss1", "abyss2"] },
+          abyss1: { title: "Pressure", desc: "Tag modifiers reduce opponent's dice size in combat.", cost: 1, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: ["abyss3"] },
+          abyss2: { title: "Void", desc: "Consuming a ready d4 increases the size of your next rolled strike.", cost: 1, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: ["abyss4"] },
+          abyss3: { title: "Implode", desc: "Rerolls opponent's highest value strike into a d4 instantly.", cost: 2, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: [] },
+          abyss4: { title: "Erosion", desc: "Every step reduces opponent durability by 1 during resolutions.", cost: 2, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: [] }
+        }
+      },
+      tempest: {
+        color: '#33ccff',
+        nodes: {
+          origin: { title: "Origin", desc: "The charging chaos of the electrical gale.", cost: 0, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: ["temp1", "temp2"] },
+          temp1: { title: "Surge", desc: "Gaining a d6 or higher triggers a free visual rolling animation.", cost: 1, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: ["temp3"] },
+          temp2: { title: "Static", desc: "Whenever any die locks, apply a +1 tag modifier to adjacent readiness.", cost: 1, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: ["temp4"] },
+          temp3: { title: "Discharge", desc: "Completely wipes a resolution slot to duplicate static energy.", cost: 2, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: [] },
+          temp4: { title: "Conduit", desc: "Transfers accumulated locked states directly into extra XP beads.", cost: 2, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: [] }
+        }
+      },
+      elysium: {
+        color: '#ffff33',
+        nodes: {
+          origin: { title: "Origin", desc: "The brilliant clarity of the golden spires.", cost: 0, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: ["ely1", "ely2"] },
+          ely1: { title: "Aureole", desc: "Your guard dice add positive expectations directly onto teammates.", cost: 1, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: ["ely3"] },
+          ely2: { title: "Prism", desc: "Splits a resolved d12 into two independent strike d6s.", cost: 1, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: ["ely4"] },
+          ely3: { title: "Halo", desc: "Unlocking any die heals the active opposing creature's targets.", cost: 2, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: [] },
+          ely4: { title: "Ascend", desc: "Succeeding in taking no damage doubles all XP rewards.", cost: 2, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: [] }
+        }
+      }
+    };
+
+    // Stage gate access verification
+    async function verifyAccess() {
+      const localDeviceId = localStorage.getItem('deviceId');
+      if (!localDeviceId) { window.location.href = 'index.html'; return; }
+      try {
+        const mappingSnap = await get(ref(realtimeDb, 'players/deviceMapping'));
+        const mapping = mappingSnap.val() || {};
+        for (const [playerName, mappedId] of Object.entries(mapping)) { if (mappedId === localDeviceId) { localPlayer = playerName; break; } }
+        if (!localPlayer) { window.location.href = 'index.html'; return; }
+
+        const shardMapSnap = await get(ref(realtimeDb, 'players/shardMapping'));
+        const shardMap = shardMapSnap.val() || {};
+        for (const [shardId, playerName] of Object.entries(shardMap)) { if (playerName === localPlayer) { localShardId = shardId; break; } }
+
+        await loadStaticData();
+        initializeAdaptationEngine();
+      } catch (error) { 
+        console.error("Gatekeeper error: ", error); 
+        window.location.href = 'index.html';
+      }
+    }
+
+    async function loadStaticData() {
+      const pSnap = await getDocs(collection(firestoreDb, "planes"));
+      pSnap.forEach(doc => { planesConfig[doc.id] = doc.data().config || {}; });
+
+      // Load all Moves details to populate moves list
+      const mSnap = await getDocs(collection(firestoreDb, "moves"));
+      mSnap.forEach(doc => {
+        const moves = doc.data();
+        Object.entries(moves).forEach(([moveId, moveData]) => {
+          allMovesData[moveId] = moveData;
+        });
+      });
+
+      // Load tree templates from Firestore (overwrites or supplements hardcoded configs)
+      try {
+        const tSnap = await getDocs(collection(firestoreDb, "upgrade_trees"));
+        tSnap.forEach(doc => {
+          upgradeTrees[doc.id] = doc.data();
+        });
+      } catch (err) {
+        console.warn("Failed to load custom upgrade trees from Firestore, using fallbacks.", err);
+      }
+    }
+
+    function initializeAdaptationEngine() {
+      onValue(ref(realtimeDb, 'gameState/shards'), snap => {
+        shardsData = snap.val() || {};
+        if (localShardId && shardsData[localShardId]) {
+          localShardData = shardsData[localShardId];
+          currentPlane = localShardData.plane || 'karask';
+          acquiredUpgrades = localShardData.upgrades || [];
+          
+          const label = document.getElementById('hud-xp-label');
+          if (label) {
+            label.innerText = currentPlane === 'karask' ? 'SHARED BODY XP' : 'SHARD XP';
+          }
+
+          const xpVal = document.getElementById('hud-xp-val');
+          if (xpVal) xpVal.innerText = localShardData.xp || 0;
+
+          // Manage visibility of Equipped/Known Moves Dashboard
+          const movesDashboard = document.getElementById('moves-dashboard');
+          if (movesDashboard) {
+              if (currentPlane !== 'karask' && currentPlane !== '') {
+                  movesDashboard.style.display = 'flex';
+                  renderMovesDashboard();
+              } else {
+                  movesDashboard.style.display = 'none';
+              }
+          }
+
+          // Disable donation if unattuned (they are the target of the donation)
+          const donateBtn = document.getElementById('btn-donate-body');
+          if (donateBtn) {
+            donateBtn.disabled = currentPlane === 'karask' || (localShardData.xp || 0) <= 0;
+          }
+          
+          buildUpgradeTreeWeb();
+        }
+      });
+    }
+
+    function buildUpgradeTreeWeb() {
+      const treeTemplate = upgradeTrees[currentPlane] || upgradeTrees.karask;
+      const color = treeTemplate.color;
+
+      const nodeLayer = document.getElementById('node-layer');
+      const edgeLayer = document.getElementById('edge-layer');
+      if (!nodeLayer || !edgeLayer) return;
+
+      nodeLayer.innerHTML = '';
+      edgeLayer.innerHTML = '';
+      physicsNodes = [];
+      physicsConnections = [];
+
+      const templateNodes = treeTemplate.nodes;
+
+      const cX = window.innerWidth / 2;
+      const cY = window.innerHeight / 2;
+
+      // Instantiate physics node items
+      Object.entries(templateNodes).forEach(([nId, config]) => {
+        const timesAcquired = acquiredUpgrades.filter(x => x === nId).length;
+        const isCollectiveUnlocked = !!config.collective && (collectiveContributions[nId]?.total || 0) >= config.cost;
+        const isAcquired = config.collective ? isCollectiveUnlocked : (config.repeating ? (config.repeatMax !== -1 && timesAcquired >= config.repeatMax) : timesAcquired > 0);
+        const isOrigin = nId === 'origin';
+        
+        // Calculate unlocking state: parent must be acquired (or node is origin)
+        let isLocked = !isOrigin;
+        if (!isOrigin) {
+          Object.entries(templateNodes).forEach(([parentId, parentConfig]) => {
+            if (parentConfig.connections && parentConfig.connections.includes(nId)) {
+              const col = collectiveContributions[parentId] || { total: 0 };
+              const parentAcquired = parentConfig.collective 
+                ? (col.total >= parentConfig.cost) 
+                : acquiredUpgrades.includes(parentId);
+
+              if (parentAcquired || parentId === 'origin') {
+                isLocked = false;
+              }
+            }
+          });
+        }
+
+        // Spawn at randomized positions around the center instead of utilizing pre-saved variables
+        const startX = isOrigin ? cX : (cX + (Math.random() * 400 - 200));
+        const startY = isOrigin ? cY : (cY + (Math.random() * 400 - 200));
+
+        const el = document.createElement('div');
+        el.className = `upgrade-node wiggle ${isAcquired ? 'acquired' : ''} ${isOrigin ? 'origin' : ''} ${isLocked ? 'locked' : ''}`;
+        el.style.setProperty('--node-color', color);
+        if (isAcquired) el.style.borderColor = '#00ff00';
+        else el.style.borderColor = color;
+
+        const repeatText = (config.repeating && timesAcquired > 0) ? ` (${timesAcquired})` : '';
+
+        el.innerHTML = `
+          <svg viewBox="0 0 100 100" class="node-svg-shape">
+            <path d="M50,10 L90,35 L90,75 L50,95 L10,75 L10,35 Z" stroke-linejoin="round" />
+          </svg>
+          <span class="node-text">${config.title}${repeatText}</span>
+        `;
+        
+        el.onclick = () => {
+          if (!isLocked) {
+            showNodeDetailsPopup(nId, config, color, isAcquired);
+          }
+        };
+
+        nodeLayer.appendChild(el);
+
+        physicsNodes.push({
+          id: nId,
+          el: el,
+          x: startX,
+          y: startY,
+          vx: 0,
+          vy: 0,
+          isOrigin: isOrigin,
+          mass: isOrigin ? 2.5 : 1
+        });
+      });
+
+      // Map connects & generate svg lines
+      Object.entries(templateNodes).forEach(([parentId, parentConfig]) => {
+        const childIds = parentConfig.connections || [];
+        childIds.forEach(childId => {
+          if (templateNodes[childId]) {
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("stroke", color);
+            line.setAttribute("stroke-width", "2");
+            line.setAttribute("stroke-dasharray", "4 4");
+            line.setAttribute("opacity", "0.4");
+            edgeLayer.appendChild(line);
+
+            physicsConnections.push({
+              parent: parentId,
+              child: childId,
+              line: line
+            });
+          }
+        });
+      });
+
+      onValue(ref(realtimeDb, 'gameState/collective_contributions'), snap => {
+        collectiveContributions = snap.val() || {};
+        buildUpgradeTreeWeb();
+        if (currentPopupNodeId) {
+            const treeTemplate = upgradeTrees[currentPlane] || upgradeTrees.karask;
+            const config = treeTemplate.nodes[currentPopupNodeId];
+            if (config) {
+                const timesAcquired = acquiredUpgrades.filter(x => x === currentPopupNodeId).length;
+                const isCollectiveUnlocked = !!config.collective && (collectiveContributions[currentPopupNodeId]?.total || 0) >= config.cost;
+                const isAcquired = config.collective ? isCollectiveUnlocked : (config.repeating ? (config.repeatMax !== -1 && timesAcquired >= config.repeatMax) : timesAcquired > 0);
+                showNodeDetailsPopup(currentPopupNodeId, config, treeTemplate.color, isAcquired);
+            }
+        }
+      });
+    }
+
+    function renderMovesDashboard() {
+        const equippedList = document.getElementById('equipped-moves-list');
+        const knownList = document.getElementById('known-moves-list');
+        const title = document.getElementById('equipped-moves-title');
+        if (!equippedList || !knownList || !title) return;
+
+        equippedList.innerHTML = '';
+        knownList.innerHTML = '';
+
+        const maxEquipped = localShardData.maxEquippedMoves || 4;
+        const equippedMoves = localShardData.moves || [];
+        title.innerText = `EQUIPPED MOVES (${equippedMoves.length}/${maxEquipped})`;
+
+        const knownMoves = localShardData.knownMoves || localShardData.moves || [];
+        const uniqueKnown = Array.from(new Set([...knownMoves, ...equippedMoves]));
+
+        equippedMoves.forEach(moveId => {
+            const move = allMovesData[moveId];
+            const chip = document.createElement('div');
+            chip.className = 'move-chip wiggle';
+            chip.style.borderColor = '#00ff00';
+            chip.innerText = move ? (move.title || moveId).toUpperCase() : moveId.toUpperCase();
+            chip.draggable = true;
+            chip.ondragstart = (e) => { e.dataTransfer.setData('moveId', moveId); e.dataTransfer.setData('source', 'equipped'); };
+            equippedList.appendChild(chip);
+        });
+
+        uniqueKnown.forEach(moveId => {
+            if (equippedMoves.includes(moveId)) return;
+            const move = allMovesData[moveId];
+            const chip = document.createElement('div');
+            chip.className = 'move-chip wiggle';
+            chip.innerText = move ? (move.title || moveId).toUpperCase() : moveId.toUpperCase();
+            chip.draggable = true;
+            chip.ondragstart = (e) => { e.dataTransfer.setData('moveId', moveId); e.dataTransfer.setData('source', 'known'); };
+            knownList.appendChild(chip);
+        });
+    }
+
+    // Detailed Pop-up Management
+    let currentPopupNodeId = null;
+    let confirmState = false;
+    let confirmTimer = null;
+
+    function showNodeDetailsPopup(nodeId, nodeConfig, color, isAcquired) {
+      currentPopupNodeId = nodeId;
+      confirmState = false;
+      if (confirmTimer) clearTimeout(confirmTimer);
+
+      const overlay = document.getElementById('popup-overlay');
+      const panel = document.getElementById('popup-panel');
+      const title = document.getElementById('popup-title');
+      const desc = document.getElementById('popup-desc');
+      const cost = document.getElementById('popup-cost');
+      const btn = document.getElementById('btn-learn-node');
+      const drainBar = document.getElementById('drain-bar');
+
+      const colContainer = document.getElementById('collective-input-container');
+      const colAmountInput = document.getElementById('collective-amount');
+      const colMaxBtn = document.getElementById('btn-collective-max');
+
+      if (!overlay || !panel || !title || !desc || !cost || !btn || !drainBar || !colContainer || !colAmountInput || !colMaxBtn) return;
+
+      panel.style.setProperty('--popup-color', color);
+      title.innerText = nodeConfig.title.toUpperCase();
+      desc.innerText = nodeConfig.desc;
+
+      const isCollective = !!nodeConfig.collective;
+      const colData = collectiveContributions[nodeId] || { total: 0 };
+      const remainingCost = Math.max(0, nodeConfig.cost - colData.total);
+      const timesAcquired = acquiredUpgrades.filter(x => x === nodeId).length;
+
+      if (isCollective) {
+          colContainer.style.display = 'flex';
+          colAmountInput.max = Math.min(localShardData.xp || 0, remainingCost);
+          colAmountInput.value = Math.min(1, Math.min(localShardData.xp || 0, remainingCost));
+          
+          colMaxBtn.onclick = () => {
+              colAmountInput.value = Math.min(localShardData.xp || 0, remainingCost);
+          };
+          
+          cost.innerText = `PROGRESS: ${colData.total} / ${nodeConfig.cost} XP (NEED: ${remainingCost} XP)`;
+      } else if (nodeConfig.repeating) {
+          colContainer.style.display = 'none';
+          const limitText = nodeConfig.repeatMax === -1 ? "∞" : nodeConfig.repeatMax;
+          cost.innerText = `TIMES LEARNT: ${timesAcquired} / ${limitText} (COST: ${nodeConfig.cost} XP)`;
+      } else {
+          colContainer.style.display = 'none';
+          cost.innerText = isAcquired ? "ALREADY ACQUIRED" : `COST: ${nodeConfig.cost} XP`;
+      }
+
+      btn.innerText = isCollective ? "CONTRIBUTE" : "LEARN";
+      
+      const isFullyAcquired = !nodeConfig.repeating ? isAcquired : (nodeConfig.repeatMax !== -1 && timesAcquired >= nodeConfig.repeatMax);
+      btn.disabled = isFullyAcquired || (isCollective ? (remainingCost <= 0 || (localShardData.xp || 0) <= 0) : (localShardData.xp || 0) < nodeConfig.cost);
+      
+      drainBar.classList.remove('draining');
+      drainBar.style.transform = 'scaleY(0)';
+
+      btn.onclick = () => {
+        if (isAcquired) return;
+
+        if (!confirmState) {
+          // First Click: Trigger Confirm state & Start CSS draining animation
+          confirmState = true;
+          btn.innerText = "CONFIRM";
+          drainBar.classList.add('draining');
+          drainBar.style.transform = 'scaleY(1)';
+
+          confirmTimer = setTimeout(() => {
+            // Revert state if confirm window expires
+            confirmState = false;
+            btn.innerText = "LEARN";
+            drainBar.classList.remove('draining');
+            drainBar.style.transform = 'scaleY(0)';
+          }, 3000);
+        } else {
+          // Second Click: Execute secured purchase
+          if (confirmTimer) clearTimeout(confirmTimer);
+          executeNodePurchase(nodeId, nodeConfig);
+          overlay.style.display = 'none';
+        }
+      };
+
+      overlay.style.display = 'flex';
+    }
+
+    document.getElementById('btn-close-panel').onclick = () => {
+      const overlay = document.getElementById('popup-overlay');
+      if (overlay) overlay.style.display = 'none';
+      if (confirmTimer) clearTimeout(confirmTimer);
+    };
+
+    async function executeNodePurchase(nodeId, nodeConfig) {
+      if (!localShardId) return;
+      
+      const updates = {};
+      const isCollective = !!nodeConfig.collective;
+      const colAmountInput = document.getElementById('collective-amount');
+      const purchaseAmount = isCollective ? (parseInt(colAmountInput.value, 10) || 0) : nodeConfig.cost;
+
+      const nextXp = Math.max(0, (localShardData.xp || 0) - purchaseAmount);
+      updates[`gameState/shards/${localShardId}/xp`] = nextXp;
+
+      if (isCollective) {
+          const currentTotal = (collectiveContributions[nodeId]?.total || 0) + purchaseAmount;
+          const currentConts = collectiveContributions[nodeId]?.contributors || {};
+          const shardCont = (currentConts[localShardId] || 0) + purchaseAmount;
+
+          updates[`gameState/collective_contributions/${nodeId}/total`] = currentTotal;
+          updates[`gameState/collective_contributions/${nodeId}/contributors/${localShardId}`] = shardCont;
+
+          // If this completes the node, apply the effects!
+          if (currentTotal >= nodeConfig.cost) {
+              await applyUpgradeEffects(nodeId, nodeConfig, updates);
+          }
+      } else {
+          const nextUpgrades = [...(localShardData.upgrades || []), nodeId];
+          updates[`gameState/shards/${localShardId}/upgrades`] = nextUpgrades;
+          await applyUpgradeEffects(nodeId, nodeConfig, updates);
+      }
+
+      await update(ref(realtimeDb), updates);
+    }
+
+    async function applyUpgradeEffects(nodeId, nodeConfig, updates) {
+      // --- Node Type Action Resolution ---
+      if (nodeConfig.type === 'unlock_move' && nodeConfig.param) {
+          const currentKnown = localShardData.knownMoves || localShardData.moves || [];
+          const uniqueKnown = Array.from(new Set([...currentKnown, nodeConfig.param]));
+          updates[`gameState/shards/${localShardId}/knownMoves`] = uniqueKnown;
+      }
+      else if (nodeConfig.type === 'increase_max_equipped' && nodeConfig.param) {
+          const currentLimit = localShardData.maxEquippedMoves || 4;
+          const val = parseInt(nodeConfig.param, 10) || 1;
+          updates[`gameState/shards/${localShardId}/maxEquippedMoves`] = currentLimit + val;
+      }
+      else if (nodeConfig.type === 'unlock_narration_word' && nodeConfig.param) {
+          const wordsSnap = await get(ref(realtimeDb, 'gameState/narrator/words/UNLOCKED'));
+          const currentWords = wordsSnap.val() || [];
+          const newWords = nodeConfig.param.split(',').map(w => w.trim().toUpperCase());
+          updates['gameState/narrator/words/UNLOCKED'] = Array.from(new Set([...currentWords, ...newWords]));
+      }
+      else if (nodeConfig.type === 'unlock_karask_move' && nodeConfig.param) {
+          const karaskMovesSnap = await get(ref(realtimeDb, 'gameState/karask/moves'));
+          const currentKMoves = karaskMovesSnap.val() || [];
+          updates['gameState/karask/moves'] = Array.from(new Set([...currentKMoves, nodeConfig.param]));
+      }
+      else if (nodeConfig.type === 'redirect_stage' && nodeConfig.param) {
+          updates['gameState/stage'] = nodeConfig.param;
+      }
+      else if (nodeConfig.type === 'add_expectation' && nodeConfig.param) {
+          const parts = nodeConfig.param.split(':');
+          if (parts.length === 2) {
+              const tag = parts[0].trim().toUpperCase();
+              const val = parseInt(parts[1], 10) || 0;
+              if (currentPlane !== 'karask' && currentPlane !== '') {
+                  const expSnap = await get(ref(realtimeDb, `gameState/shards/${localShardId}/exceptions/${tag}`));
+                  updates[`gameState/shards/${localShardId}/exceptions/${tag}`] = (expSnap.val() || 0) + val;
+              } else {
+                  const expSnap = await get(ref(realtimeDb, `gameState/karask/exceptions/${tag}`));
+                  updates[`gameState/karask/exceptions/${tag}`] = (expSnap.val() || 0) + val;
+              }
+          }
+      }
+    }
+
+    // Add Drag and Drop listeners to Dashboard lists
+    const equippedContainer = document.getElementById('equipped-moves-list');
+    if (equippedContainer) {
+        equippedContainer.ondragover = (e) => e.preventDefault();
+        equippedContainer.ondrop = async (e) => {
+            e.preventDefault();
+            const moveId = e.dataTransfer.getData('moveId');
+            const source = e.dataTransfer.getData('source');
+            if (source === 'known' && moveId) {
+                const currentEquipped = [...(localShardData.moves || [])];
+                const maxEquipped = localShardData.maxEquippedMoves || 4;
+                if (currentEquipped.includes(moveId)) return;
+                if (currentEquipped.length >= maxEquipped) {
+                    alert(`CANNOT EQUIP: Limit of ${maxEquipped} moves reached!`);
+                    return;
+                }
+                currentEquipped.push(moveId);
+                await update(ref(realtimeDb, `gameState/shards/${localShardId}`), { moves: currentEquipped });
+            }
+        };
+    }
+
+    const knownContainer = document.getElementById('known-moves-list');
+    if (knownContainer) {
+        knownContainer.ondragover = (e) => e.preventDefault();
+        knownContainer.ondrop = async (e) => {
+            e.preventDefault();
+            const moveId = e.dataTransfer.getData('moveId');
+            const source = e.dataTransfer.getData('source');
+            if (source === 'equipped' && moveId) {
+                const currentEquipped = (localShardData.moves || []).filter(m => m !== moveId);
+                await update(ref(realtimeDb, `gameState/shards/${localShardId}`), { moves: currentEquipped });
+            }
+        };
+    }
+
+    // Stateless Equalizing Distribution Engine
+    async function distributeDonatedXP(amount) {
+      if (amount <= 0) return;
+
+      const shardsSnap = await get(ref(realtimeDb, 'gameState/shards'));
+      const allShards = shardsSnap.val() || {};
+
+      // Determine eligible unattuned shards (who do not have a plane attuned)
+      const unattunedShardIds = Object.keys(allShards).filter(sId => {
+        return !allShards[sId].plane || allShards[sId].plane === 'karask' || allShards[sId].plane === '';
+      });
+
+      if (unattunedShardIds.length === 0) {
+        // Fallback: Store general reserve XP if no players are active/unattuned
+        const karaskXpSnap = await get(ref(realtimeDb, 'gameState/karask/xp'));
+        const currentKXP = karaskXpSnap.val() || 0;
+        await set(ref(realtimeDb, 'gameState/karask/xp'), currentKXP + amount);
+        return;
+      }
+
+      const updates = {};
+      
+      // Distribute sequentially (bead by bead) to guarantee strict distribution tracking
+      for (let i = 0; i < amount; i++) {
+        let minXp = Infinity;
+        let candidates = [];
+
+        // 1. Gather all current XP values (including modifications already staged in this loop)
+        unattunedShardIds.forEach(sId => {
+          const activeXp = (updates[`gameState/shards/${sId}/xp`] !== undefined)
+              ? updates[`gameState/shards/${sId}/xp`]
+              : (allShards[sId].xp || 0);
+
+          if (activeXp < minXp) {
+            minXp = activeXp;
+            candidates = [sId];
+          } else if (activeXp === minXp) {
+            candidates.push(sId);
+          }
+        });
+
+        // 2. Select randomly among those with the minimum XP to satisfy distribution tracking
+        const chosenShard = candidates[Math.floor(Math.random() * candidates.length)];
+        const baseXP = (updates[`gameState/shards/${chosenShard}/xp`] !== undefined)
+            ? updates[`gameState/shards/${chosenShard}/xp`]
+            : (allShards[chosenShard].xp || 0);
+            
+        updates[`gameState/shards/${chosenShard}/xp`] = baseXP + 1;
+      }
+
+      await update(ref(realtimeDb), updates);
+    }
+
+    document.getElementById('btn-donate-body').onclick = async () => {
+      if (!localShardId || currentPlane === 'karask' || (localShardData.xp || 0) <= 0) return;
+      
+      const donationAmount = 1;
+      const nextXp = (localShardData.xp || 0) - donationAmount;
+
+      const updates = {};
+      updates[`gameState/shards/${localShardId}/xp`] = nextXp;
+      await update(ref(realtimeDb), updates);
+
+      await distributeDonatedXP(donationAmount);
+    };
+
+    document.getElementById('btn-complete-adaptation').onclick = async () => {
+      if (!localShardId) return;
+
+      const remainingXp = localShardData.xp || 0;
+      let warningMsg = "Are you sure you are done adapting?";
+      if (remainingXp > 0 && currentPlane !== 'karask') {
+        warningMsg += `\n\nALL ${remainingXp} UNSPENT XP WILL BE DONATED TO THE BODY.`;
+      }
+
+      if (confirm(warningMsg)) {
+        if (remainingXp > 0 && currentPlane !== 'karask') {
+          const updates = {};
+          updates[`gameState/shards/${localShardId}/xp`] = 0;
+          await update(ref(realtimeDb), updates);
+          await distributeDonatedXP(remainingXp);
+        }
+        
+        // Hand stage routing over to the presence loop
+        const nextStageRef = ref(realtimeDb, 'gameState/stage');
+        await set(nextStageRef, 'encounter');
+      }
+    };
+
+    function getLineIntersection(p1, p2, p3, p4) {
+      const denominator = ((p4.y - p3.y) * (p2.x - p1.x)) - ((p4.x - p3.x) * (p2.y - p1.y));
+      if (denominator === 0) return null; // Parallel lines
+
+      let ua = (((p4.x - p3.x) * (p1.y - p3.y)) - ((p4.y - p3.y) * (p1.x - p3.x))) / denominator;
+      let ub = (((p2.x - p1.x) * (p1.y - p3.y)) - ((p2.y - p1.y) * (p1.x - p3.x))) / denominator;
+
+      if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) {
+        return {
+          x: p1.x + (ua * (p2.x - p1.x)),
+          y: p1.y + (ua * (p2.y - p1.y))
+        };
+      }
+      return null;
+    }
+
+    // ==========================================
+    // DYNAMIC WEB PHYSICS SOLVER
+    // ==========================================
+    function solvePhysicsLoop() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      const SPRING_LENGTH = 140;
+      const SPRING_K = 0.04;      // Hooke's Law constant
+      const REPULSION_K = 350;    // Repulsive force multiplier
+      const ANCHOR_K = 0.003;     // Slight gravity pull to center
+      const DAMPING = 0.85;       // Velocity friction loss
+
+      // 1. Hooke's Law connection forces
+      physicsConnections.forEach(conn => {
+        const pNode = physicsNodes.find(n => n.id === conn.parent);
+        const cNode = physicsNodes.find(n => n.id === conn.child);
+        if (!pNode || !cNode) return;
+
+        const dx = cNode.x - pNode.x;
+        const dy = cNode.y - pNode.y;
+        const dist = Math.sqrt(dx*dx + dy*dy) || 0.1;
+
+        const delta = dist - SPRING_LENGTH;
+        const force = delta * SPRING_K;
+
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+
+        if (!pNode.isOrigin) { pNode.vx += fx / pNode.mass; pNode.vy += fy / pNode.mass; }
+        if (!cNode.isOrigin) { cNode.vx -= fx / cNode.mass; cNode.vy -= fy / cNode.mass; }
+      });
+
+      // 2. Pairwise repulsion forces
+      for (let i = 0; i < physicsNodes.length; i++) {
+        for (let j = i + 1; j < physicsNodes.length; j++) {
+          const n1 = physicsNodes[i];
+          const n2 = physicsNodes[j];
+
+          const dx = n2.x - n1.x;
+          const dy = n2.y - n1.y;
+          const dist = Math.sqrt(dx*dx + dy*dy) || 0.1;
+          
+          if (dist < 250) {
+            const force = REPULSION_K / (dist * dist);
+            const fx = (dx / dist) * force;
+            const fy = (dy / dist) * force;
+
+            if (!n1.isOrigin) { n1.vx -= fx / n1.mass; n1.vy -= fy / n1.mass; }
+            if (!n2.isOrigin) { n2.vx += fx / n2.mass; n2.vy += fy / n2.mass; }
+          }
+        }
+      }
+
+      // 2.5. Prevent Wire Crossings (Untangling Forces)
+      const UNTANGLE_FORCE = 2.0; // Strong push to untangle crossings quickly
+      for (let i = 0; i < physicsConnections.length; i++) {
+        for (let j = i + 1; j < physicsConnections.length; j++) {
+          const conn1 = physicsConnections[i];
+          const conn2 = physicsConnections[j];
+
+          // Skip adjacent connections sharing a common node
+          if (conn1.parent === conn2.parent || conn1.parent === conn2.child ||
+              conn1.child === conn2.parent || conn1.child === conn2.child) {
+            continue;
+          }
+
+          const nA = physicsNodes.find(n => n.id === conn1.parent);
+          const nB = physicsNodes.find(n => n.id === conn1.child);
+          const nC = physicsNodes.find(n => n.id === conn2.parent);
+          const nD = physicsNodes.find(n => n.id === conn2.child);
+
+          if (!nA || !nB || !nC || !nD) continue;
+
+          const P = getLineIntersection(nA, nB, nC, nD);
+          if (P) {
+            const pushAway = (node) => {
+              if (node.isOrigin) return;
+              const dx = node.x - P.x;
+              const dy = node.y - P.y;
+              const dist = Math.sqrt(dx*dx + dy*dy) || 0.1;
+              node.vx += (dx / dist) * UNTANGLE_FORCE;
+              node.vy += (dy / dist) * UNTANGLE_FORCE;
+            };
+            pushAway(nA); pushAway(nB); pushAway(nC); pushAway(nD);
+          }
+        }
+      }
+
+      // 3. Anchor forces pulling all nodes toward screen center
+      physicsNodes.forEach(node => {
+        if (node.isOrigin) {
+          // Fixed center coordinate for the Origin Node
+          node.x = centerX;
+          node.y = centerY;
+          node.vx = 0;
+          node.vy = 0;
+        } else {
+          const dx = centerX - node.x;
+          const dy = centerY - node.y;
+          node.vx += dx * ANCHOR_K;
+          node.vy += dy * ANCHOR_K;
+
+          // Apply integration velocities
+          node.x += node.vx;
+          node.y += node.vy;
+          node.vx *= DAMPING;
+          node.vy *= DAMPING;
+        }
+
+        // Translate actual node elements
+        node.el.style.left = `${node.x}px`;
+        node.el.style.top = `${node.y}px`;
+      });
+
+      // 4. Redraw SVG lines connecting parents and children
+      physicsConnections.forEach(conn => {
+        const pNode = physicsNodes.find(n => n.id === conn.parent);
+        const cNode = physicsNodes.find(n => n.id === conn.child);
+        if (!pNode || !cNode) return;
+
+        conn.line.setAttribute("x1", pNode.x);
+        conn.line.setAttribute("y1", pNode.y);
+        conn.line.setAttribute("x2", cNode.x);
+        conn.line.setAttribute("y2", cNode.y);
+      });
+
+      requestAnimationFrame(solvePhysicsLoop);
+    }
+
+    requestAnimationFrame(solvePhysicsLoop);
+    verifyAccess();
+  </script>
+</body>
+</html>

@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eschaton - Wager</title>
+  
+  <link rel="stylesheet" href="effects.css">
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background-color: #000; color: #fff; font-family: 'Arial', sans-serif;
+      height: 100vh; overflow: hidden; position: relative;
+    }
+
+    .wiggle { animation: extremeWiggle 0.4s infinite linear !important; }
+
+    /* =========================================
+       DYNAMIC NARRATION (Floats based on Phase)
+       ========================================= */
+    #narration-container { 
+      position: absolute; left: 0; right: 0; 
+      width: 100%; min-height: 100px; z-index: 20; 
+      display: flex; justify-content: center;
+      transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), top 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    /* Dead Center when there is no active wager sequence */
+    body.phase-closed #narration-container { top: 50%; transform: translateY(-50%); }
+    /* Floats to the top of the screen during Wager Phases */
+    body.phase-open #narration-container, body.phase-wheel #narration-container { top: 20px; transform: translateY(0); }
+
+    /* =========================================
+       THE CENTER WHEEL (Flies in when revealed) 
+       ========================================= */
+    #wheel-container {
+      position: absolute; top: 50%; left: 50%;
+      width: 500px; height: 500px;
+      border: 50px solid #222; border-radius: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1; z-index: 5;
+      transition: all 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    
+    #wheel-container::before {
+      content: ""; position: absolute; pointer-events: none;
+      top: -4px; left: -4px; right: -4px; bottom: -4px;
+      border: 3px dotted #777; border-radius: 50%; 
+    }
+    
+    #wheel-container::after {
+      content: ""; position: absolute; pointer-events: none;
+      top: -54px; left: -54px; right: -54px; bottom: -54px;
+      border: 3px dotted #777; border-radius: 50%; 
+    }
+
+    #wheel-container.hidden {
+      transform: translate(-50%, -20%) scale(0.6);
+      opacity: 0; pointer-events: none;
+    }
+
+    .wheel-center-text {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center; width: 300px;
+    }
+
+    #wheel-prompt {
+      font-size: 16px; letter-spacing: 3px; font-weight: bold; color: #888;
+      text-transform: uppercase; margin-bottom: 10px;
+      text-shadow: 0 4px 10px rgba(0,0,0,0.9); transition: color 0.3s;
+    }
+
+    #wheel-subtext {
+      font-size: 11px; color: #ffaa00; text-transform: uppercase; letter-spacing: 1px;
+      min-height: 15px; text-shadow: 0 2px 5px rgba(0,0,0,0.9);
+    }
+
+    /* WHEEL SLOTS & DICE */
+    .wheel-item {
+      position: absolute; display: flex; flex-direction: column; align-items: center; gap: 8px;
+      transform: translate(-50%, -50%);
+      transition: opacity 0.5s ease;
+    }
+
+    .wheel-player-name {
+      font-size: 10px; font-weight: bold; color: #ccc; background: #111;
+      border: 1px solid #444; padding: 2px 6px; border-radius: 4px;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+
+    .wheel-die {
+      width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 900; color: #fff; border-radius: 6px; border: 3px solid;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.8); transition: transform 0.2s;
+    }
+    
+    .wheel-die.unknown-die { border-color: #222 !important; background: #0a0a0a !important; color: #444 !important; }
+    .wheel-die.d4 { border-color: #ff4444; background: rgba(68, 0, 0, 0.8); }
+    .wheel-die.d6 { border-color: #4444ff; background: rgba(0, 0, 68, 0.8); }
+    .wheel-die.d8 { border-color: #44ff44; background: rgba(0, 68, 0, 0.8); }
+    .wheel-die.d10 { border-color: #aa44ff; background: rgba(34, 0, 68, 0.8); }
+    .wheel-die.d12 { border-color: #ffff44; background: rgba(68, 68, 0, 0.8); }
+    .wheel-die.d20 { border-color: #ffffff; background: rgba(34, 34, 34, 0.8); }
+
+
+    /* =========================================
+       THE WAGER DROP PANEL (Centered)
+       ========================================= */
+    #wager-panel {
+      background: rgba(15, 15, 15, 0.95); border: 2px solid #333; border-radius: 8px;
+      padding: 20px; display: flex; flex-direction: column; align-items: center;
+      gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+      z-index: 10;
+    }
+
+    #wager-panel.hidden {
+      transform: translate(-50%, 150px) scale(0.8);
+      opacity: 0; pointer-events: none;
+    }
+
+    #wager-panel-title { font-size: 12px; font-weight: bold; color: #888; letter-spacing: 2px; }
+
+    #wager-ring {
+      width: 200px; height: 80px;
+      border: 2px dashed #555; border-radius: 8px;
+      background: rgba(255, 255, 255, 0.02);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; position: relative;
+    }
+    
+    #wager-ring-text { color: #555; font-size: 12px; font-weight: bold; letter-spacing: 1px; }
+
+    #wager-ring.active {
+      border-color: #ffaa00; background: rgba(255, 170, 0, 0.1); transform: scale(1.05);
+    }
+
+    #staged-die-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+    /* ACTION BUTTONS */
+    #wager-actions { display: flex; gap: 10px; width: 100%; }
+
+    #wager-actions button {
+      flex: 1; padding: 10px; font-size: 12px; font-weight: bold; cursor: pointer;
+      border-radius: 4px; border: 1px solid; transition: all 0.2s; text-transform: uppercase;
+    }
+    #wager-actions button:disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
+
+    #btn-cancel-wager { background: #000; color: #ff6666; border-color: #8b0000; }
+    #btn-cancel-wager:hover { background: #8b0000; color: #fff; }
+    
+    #btn-submit-wager { background: #000; color: #66ff66; border-color: #008b00; }
+    #btn-submit-wager:hover { background: #008b00; color: #fff; }
+
+    /* =========================================
+       DICE CONTAINER (Locked to Bottom)
+       ========================================= */
+    #dice-container { 
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 800px; z-index: 20; 
+      transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.6s;
+    }
+
+    body.phase-wheel #dice-container {
+      transform: translate(-50%, 150px);
+      opacity: 0; pointer-events: none;
+    }
+
+  </style>
+</head>
+<body class="phase-closed">
+
+  <svg width="0" height="0" style="position:absolute; z-index:-1;">
+    <defs>
+      <filter id="extreme-1"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="1" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+      <filter id="extreme-2"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="2" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+      <filter id="extreme-3"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="3" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+      <filter id="extreme-4"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="4" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+    </defs>
+  </svg>
+
+  <div id="narration-container"></div>
+
+  <div id="wager-panel" class="hidden wiggle">
+    <div id="wager-panel-title">WAGER FOR CONTROL</div>
+    
+    <div id="wager-ring">
+       <span id="wager-ring-text">DRAG DIE HERE</span>
+       <div id="staged-die-container"></div>
+    </div>
+
+    <div id="wager-actions">
+       <button id="btn-cancel-wager" disabled>CANCEL</button>
+       <button id="btn-submit-wager" disabled>SUBMIT</button>
+    </div>
+  </div>
+
+  <div id="wheel-container" class="hidden wiggle">
+    <div class="wheel-center-text">
+       <div id="wheel-prompt">WAITING FOR OTHERS...</div>
+       <div id="wheel-subtext"></div>
+    </div>
+    <div id="wheel-items-target"></div>
+  </div>
+
+  <div id="dice-container"></div>
+  <div id="stage-transition-overlay"></div>
+
+  <script type="module">
+    import { initializeStageManager } from './stage-manager.js';
+    import { initializePresence } from './presence.js'; 
+    import { realtimeDb } from './firebase-config.js';
+    import { ref, get, update, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { igniteNarrationEngine } from './narration-display.js';
+    import { igniteDiceTray } from './dice-tray.js';
+
+    initializeStageManager();
+    initializePresence();
+
+    let localPlayer = null;
+    let localShardId = null;
+    let shardMap = {};
+    let globalWagerState = {};
+    let stagedWager = null; 
+
+    const wheelCont = document.getElementById('wheel-container');
+    const wagerPanel = document.getElementById('wager-panel');
+    
+    const uiWheelItems = document.getElementById('wheel-items-target');
+    const uiWheelPrompt = document.getElementById('wheel-prompt');
+    const uiWheelSubtext = document.getElementById('wheel-subtext');
+
+    const uiRingText = document.getElementById('wager-ring-text');
+    const uiStagedDie = document.getElementById('staged-die-container');
+    const btnCancel = document.getElementById('btn-cancel-wager');
+    const btnSubmit = document.getElementById('btn-submit-wager');
+
+    async function verifyAccess() {
+      const localDeviceId = localStorage.getItem('deviceId');
+      if (!localDeviceId) { window.location.href = 'index.html'; return; }
+      try {
+        const mappingSnap = await get(ref(realtimeDb, 'players/deviceMapping'));
+        const mapping = mappingSnap.val() || {};
+        for (const [playerName, mappedId] of Object.entries(mapping)) { if (mappedId === localDeviceId) { localPlayer = playerName; break; } }
+        if (!localPlayer) { window.location.href = 'index.html'; return; }
+
+        const shardMapSnap = await get(ref(realtimeDb, 'players/shardMapping'));
+        shardMap = shardMapSnap.val() || {};
+        for (const [shardId, playerName] of Object.entries(shardMap)) { if (playerName === localPlayer) { localShardId = shardId; break; } }
+
+        igniteNarrationEngine('narration-container');
+        if (localShardId) igniteDiceTray('dice-container', localShardId);
+        
+        initializeWagerEngine();
+      } catch (error) { 
+        console.error("Gatekeeper error: ", error); 
+        window.location.href = 'index.html';
+      }
+    }
+
+    function setPhaseVisibility(phaseState, promptText, subText, promptColor) {
+        document.body.className = `phase-${phaseState}`;
+
+        if (phaseState === 'closed') {
+            wheelCont.classList.add('hidden');
+            wagerPanel.classList.add('hidden');
+        } else if (phaseState === 'open') {
+            wheelCont.classList.add('hidden');
+            wagerPanel.classList.remove('hidden');
+        } else if (phaseState === 'wheel' || phaseState === 'rolling' || phaseState === 'resolved') {
+            document.body.className = 'phase-wheel'; 
+            wheelCont.classList.remove('hidden');
+            wagerPanel.classList.add('hidden');
+        }
+
+        if (promptText) {
+            uiWheelPrompt.innerText = promptText;
+            uiWheelPrompt.style.color = promptColor;
+            uiWheelSubtext.innerText = subText;
+        }
+    }
+
+    function initializeWagerEngine() {
+      onValue(ref(realtimeDb, 'gameState/wager'), async (snap) => {
+        globalWagerState = snap.val() || { phase: 'closed' };
+        
+        let hasActiveDice = true;
+        const diceSnap = await get(ref(realtimeDb, `gameState/shards/${localShardId}/dicepool`));
+        const usableDice = (diceSnap.val() || []).filter(d => d && d.state !== 'used');
+        if (usableDice.length === 0) hasActiveDice = false;
+
+        const hasWagered = globalWagerState.wagers && globalWagerState.wagers[localShardId];
+        if (hasWagered) stagedWager = null; 
+
+        if (globalWagerState.phase === 'closed') {
+           setPhaseVisibility('closed');
+        }
+        else if (globalWagerState.phase === 'open') {
+           if (!hasActiveDice || hasWagered) {
+              setPhaseVisibility('wheel', hasWagered ? "WAGER ACCEPTED." : "WAITING FOR OTHERS...", "", "#ffaa00");
+           } else {
+              setPhaseVisibility('open');
+           }
+        } 
+        else if (globalWagerState.phase === 'wheel') {
+           setPhaseVisibility('wheel', "WAGERS LOCKED", "", "#fff");
+        }
+        else if (globalWagerState.phase === 'rolling' || globalWagerState.phase === 'resolved') {
+           setPhaseVisibility('wheel', "ROLLING...", "LOWEST RESULT GAINS CONTROL", "#fff");
+        }
+
+        renderWheel(globalWagerState.wagers || {});
+      });
+    }
+
+    window.addEventListener('dieWagered', (e) => {
+       if (stagedWager) return; 
+       
+       const index = e.detail.index;
+       const size = e.detail.size;
+       stagedWager = { index, size };
+
+       const updates = {};
+       updates[`gameState/shards/${localShardId}/dicepool/${index}/state`] = 'used'; 
+       update(ref(realtimeDb), updates);
+
+       renderStagedUI();
+    });
+
+    function renderStagedUI() {
+        if (stagedWager) {
+            uiRingText.style.display = 'none';
+            uiStagedDie.innerHTML = `<div class="wheel-die d${stagedWager.size} wiggle">${stagedWager.size}</div>`;
+            btnCancel.disabled = false;
+            btnSubmit.disabled = false;
+        } else {
+            uiRingText.style.display = 'block';
+            uiStagedDie.innerHTML = '';
+            btnCancel.disabled = true;
+            btnSubmit.disabled = true;
+        }
+    }
+
+    btnCancel.onclick = () => {
+        if (!stagedWager) return;
+        
+        const updates = {};
+        updates[`gameState/shards/${localShardId}/dicepool/${stagedWager.index}/state`] = 'ready';
+        update(ref(realtimeDb), updates);
+        
+        stagedWager = null;
+        renderStagedUI();
+    };
+
+    btnSubmit.onclick = () => {
+        if (!stagedWager) return;
+
+        const updates = {};
+        // Pushing originalIndex ensures the Narrator can refund the die if they hit HIDE
+        updates[`gameState/wager/wagers/${localShardId}`] = { 
+            size: stagedWager.size, 
+            side: stagedWager.size, 
+            originalIndex: stagedWager.index 
+        };
+        update(ref(realtimeDb), updates);
+
+        stagedWager = null;
+        renderStagedUI();
+    };
+
+    function renderWheel(wagers) {
+       uiWheelItems.innerHTML = '';
+       const shards = Object.keys(shardMap);
+       const num = shards.length;
+       const radius = 225; 
+
+       const localIndex = shards.indexOf(localShardId);
+       const lIndex = localIndex >= 0 ? localIndex : 0;
+       
+       const angleOffset = (Math.PI / 2) - ((lIndex / num) * 2 * Math.PI);
+
+       shards.forEach((sId, index) => {
+          const angle = (index / num) * 2 * Math.PI + angleOffset;
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+
+          const el = document.createElement('div');
+          el.className = 'wheel-item';
+          
+          el.style.left = `calc(50% + ${x}px)`;
+          el.style.top = `calc(50% + ${y}px)`;
+          
+          const pName = shardMap[sId] || 'UNKNOWN';
+          const w = wagers[sId];
+          
+          if (w) {
+             el.innerHTML = `
+                <div class="wheel-die d${w.size}" data-size="${w.size}" data-side="${w.side}">${w.side}</div>
+                <div class="wheel-player-name">${pName}</div>
+             `;
+          } else {
+             el.innerHTML = `
+                <div class="wheel-die unknown-die">?</div>
+                <div class="wheel-player-name">${pName}</div>
+             `;
+          }
+          uiWheelItems.appendChild(el);
+       });
+    }
+
+    function wheelRollLoop() {
+        if (globalWagerState.phase === 'rolling' && globalWagerState.rollingUntil > Date.now()) {
+            const dice = document.querySelectorAll('.wheel-item .wheel-die:not(.unknown-die)');
+            dice.forEach(d => {
+                const size = parseInt(d.dataset.size);
+                d.innerText = Math.floor(Math.random() * size) + 1;
+                d.style.transform = 'scale(1.3)';
+            });
+        } else if (globalWagerState.phase === 'rolling' || globalWagerState.phase === 'resolved') {
+            const dice = document.querySelectorAll('.wheel-item .wheel-die:not(.unknown-die)');
+            dice.forEach(d => {
+                d.innerText = d.dataset.side;
+                d.style.transform = 'scale(1)';
+            });
+            if (globalWagerState.phase === 'resolved' && globalWagerState.winner) {
+               uiWheelPrompt.innerText = `${shardMap[globalWagerState.winner]} GAINS CONTROL`;
+               uiWheelPrompt.style.color = '#66ff66';
+            }
+        }
+        requestAnimationFrame(wheelRollLoop);
+    }
+    wheelRollLoop();
+
+    verifyAccess();
+  </script>
+</body>
+</html>

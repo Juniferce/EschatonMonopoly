@@ -1,0 +1,219 @@
+/* ==========================================================================
+   THE BLACK WATER EFFECTS ENGINE - AMBIENT WAVES (SIMPLIFIED)
+   ========================================================================= */
+
+.q-card-wrapper, #qcard-0 {
+  position: relative;
+  transform-origin: center center;
+  opacity: 0; /* Hidden by default for fade-in */
+  will-change: transform, filter, opacity;
+}
+
+/* The Entrance: Simple Fade and settle into Bobbing/Refraction */
+.q-card-wrapper.is-visible, #qcard-0.is-visible {
+  animation: 
+    simpleFadeIn 1s ease-out forwards,
+    liquidBob 5s ease-in-out infinite,
+    waterRefraction 0.4s infinite linear;
+}
+
+/* --- THE IDLE AMBIENT RIPPLES --- */
+.q-card-wrapper::before, .q-card-wrapper::after,
+#qcard-0::before, #qcard-0::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 2px solid rgba(220, 220, 220, 0.45);
+  border-radius: 4px; 
+  pointer-events: none;
+  opacity: 0;
+  z-index: -1;
+  will-change: transform, opacity, filter;
+}
+
+/* Primary Wave Outlines */
+.q-card-wrapper.is-visible::before, #qcard-0.is-visible::before {
+  animation: 
+    disintegratingRectWave 5s infinite cubic-bezier(0.1, 0.8, 0.3, 1),
+    extremeWiggle 0.4s infinite linear;
+}
+
+/* Secondary Offset Wave Outlines */
+.q-card-wrapper.is-visible::after, #qcard-0.is-visible::after {
+  animation: 
+    disintegratingRectWave 5s infinite cubic-bezier(0.15, 0.6, 0.4, 1) 1.8s,
+    extremeWiggle 0.4s infinite linear;
+  border-color: rgba(180, 180, 180, 0.25);
+  border-width: 1px;
+}
+
+/* ==========================================================================
+   ANIMATION KEYFRAMES
+   ========================================================================== */
+
+@keyframes simpleFadeIn {
+  0% { 
+    opacity: 0; 
+    filter: blur(8px); 
+    transform: scale(0.95);
+  }
+  100% { 
+    opacity: 1; 
+    filter: blur(0px); 
+    transform: scale(1);
+  }
+}
+
+/* The 10x multiplier structural boiling effect */
+/* The 10x multiplier structural boiling effect */
+@keyframes extremeWiggle {
+  0%, 100% { filter: url(#extreme-1); }
+  25% { filter: url(#extreme-2); }
+  50% { filter: url(#extreme-3); }
+  75% { filter: url(#extreme-4); }
+}
+
+/* Idle ambient scaling */
+@keyframes disintegratingRectWave {
+  0% { transform: scale(1); opacity: 0; }
+  8% { opacity: 0.65; }
+  70% { opacity: 0.2; }
+  100% { transform: scale(1.35, 1.25); opacity: 0; }
+}
+
+/* Box Idle Float */
+@keyframes liquidBob {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(0.6deg); }
+}
+
+/* Box Standard Refraction */
+@keyframes waterRefraction {
+  0%, 100% { filter: url(#sketch-1); }
+  25% { filter: url(#sketch-2); }
+  50% { filter: url(#sketch-3); }
+  75% { filter: url(#sketch-4); }
+}
+
+/* ==========================================================================
+   GLOBAL TRANSITION OVERLAY
+   ========================================================================== */
+
+#stage-transition-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #000;
+  opacity: 0;
+  pointer-events: none; /* Ignore clicks until triggered */
+  z-index: 9999;
+  transition: opacity 1s ease-in-out;
+}
+
+#stage-transition-overlay.is-active {
+  opacity: 1;
+  pointer-events: all; /* Block clicks once the fade starts */
+}
+
+/* ==========================================================================
+   GLOBAL TRANSITION OVERLAY
+   ========================================================================== */
+
+#stage-transition-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #000;
+  
+  /* HIDDEN BY DEFAULT */
+  display: none; 
+  opacity: 0;
+  
+  z-index: 9999;
+  transition: opacity 1s ease-in-out;
+}
+
+#stage-transition-overlay.is-active {
+  /* SHOW IT WHEN ACTIVE */
+  display: block;
+  opacity: 1;
+}
+
+/* ==========================================================================
+   RESPONSIVE SCALING & MEDIA QUERIES
+   ========================================================================== */
+
+/* Prevent any horizontal scrolling globally */
+body {
+  overflow-x: hidden !important;
+  width: 100%;
+}
+
+/* Ensure main containers never touch the literal edge of a phone screen */
+#game-container, 
+#narrator-deck {
+  width: 100%;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+/* --- LOBBY SHARD GRID SCALING --- */
+/* Default is 4 columns. On tablets/smaller laptops, drop to 2 columns */
+@media (max-width: 850px) {
+  .shard-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px; /* Tighter gap on smaller screens */
+  }
+}
+
+/* On phones, drop to a single vertical column */
+@media (max-width: 500px) {
+  .shard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .lobby-header {
+    font-size: 24px; /* Scale down the massive header */
+  }
+}
+
+@keyframes floatIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.narration-word {
+  display: inline-block;
+  opacity: 0;
+  animation: floatIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* =========================================
+   DICE SILHOUETTES & COLORS
+   ========================================= */
+.die-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; overflow: visible; }
+.die-svg path { fill: var(--bg-color, rgba(0,0,0,0.8)); stroke: var(--border-color, #fff); transition: all 0.2s ease; }
+
+.die.d4, .pool-die.d4, .die-clone.d4 { --border-color: #ff4444; --bg-color: rgba(68, 0, 0, 0.8); }
+.die.d6, .pool-die.d6, .die-clone.d6 { --border-color: #4444ff; --bg-color: rgba(0, 0, 68, 0.8); }
+.die.d8, .pool-die.d8, .die-clone.d8 { --border-color: #44ff44; --bg-color: rgba(0, 68, 0, 0.8); }
+.die.d10, .pool-die.d10, .die-clone.d10 { --border-color: #aa44ff; --bg-color: rgba(34, 0, 68, 0.8); }
+.die.d12, .pool-die.d12, .die-clone.d12 { --border-color: #ffff44; --bg-color: rgba(68, 68, 0, 0.8); }
+.die.d20, .pool-die.d20, .die-clone.d20 { --border-color: #ffffff; --bg-color: rgba(34, 34, 34, 0.8); }
+
+/* =========================================
+   RESOLUTION POOL COLORS
+   ========================================= */
+.res-type-strike .die, .res-type-strike.pool-die { --bg-color: rgba(180, 0, 0, 0.8) !important; --border-color: #ff4444 !important; }
+.res-type-maneuver .die, .res-type-maneuver.pool-die { --bg-color: rgba(0, 100, 200, 0.8) !important; --border-color: #44aaff !important; }
+.res-type-guard .die, .res-type-guard.pool-die { --bg-color: rgba(180, 180, 0, 0.8) !important; --border-color: #ffff44 !important; }

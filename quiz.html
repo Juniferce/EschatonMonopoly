@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eschaton Monopoly</title>
+    <link rel="stylesheet" href="effects.css">
+    <script src="water-physics.js"></script>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      
+      body {
+        background-color: #000000;
+        color: #ffffff;
+        font-family: 'Arial', sans-serif;
+        min-height: 100vh;
+        overflow-x: hidden;
+        overflow-y: auto; 
+        -ms-overflow-style: none;  
+        scrollbar-width: none;     
+      }
+      
+      body::-webkit-scrollbar {
+        display: none; 
+      }
+      
+      #game-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 75vh; 
+        max-width: 800px;
+        margin: 0 auto;
+        padding-top: 35vh;
+        padding-bottom: 45vh;
+      }
+
+      .monopoly-deed {
+        background: #111;
+        border: 4px solid #fff;
+        width: 90vw;
+        max-width: 540px; 
+        text-align: center;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        user-select: none;
+      }
+
+      .deed-header {
+        background-color: #0072BB; 
+        color: white;
+        padding: 22px;
+        border-bottom: 4px solid #fff;
+        font-size: 22px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      .deed-body {
+        padding: 35px 30px;
+      }
+
+      .question-text {
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 35px;
+        line-height: 1.4;
+      }
+
+      .options-container {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .monopoly-btn {
+        background-color: #000;
+        color: #fff;
+        border: 3px solid #fff;
+        padding: 16px;
+        font-family: inherit;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        text-transform: uppercase;
+        transition: background-color 0.2s, color 0.2s;
+      }
+
+      .monopoly-btn:hover {
+        background-color: #fff;
+        color: #000;
+      }
+
+      .monopoly-slider {
+        width: 100%;
+        margin: 25px 0;
+        cursor: pointer;
+        height: 8px;
+      }
+
+      .q-card-wrapper {
+        display: none; 
+      }
+
+      .selected-option {
+        background-color: #4CAF50 !important;
+        color: #000 !important;
+        border-color: #4CAF50 !important;
+      }
+
+      .disabled-option {
+        opacity: 0.20;
+        pointer-events: none;
+        border-style: dashed;
+      }
+
+      /* Universally hide scrollbars across all elements and containers */
+      * {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;     /* Firefox */
+      }
+
+      *::-webkit-scrollbar {
+        display: none;             /* Chrome, Safari, and Opera */
+      }
+
+    </style>
+  </head>
+  <body>
+
+    <div id="game-container">
+      <div class="element-wrapper q-card-wrapper" id="qcard-0">
+        <div class="surface-box monopoly-deed">
+          <div class="deed-header" style="background-color: #D2042D;">LOGIN</div>
+          <div class="deed-body">
+            <div class="question-text">Who's playing?</div>
+            <div class="options-container" id="login-options"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="dynamic-questions" style="display:contents;"></div>
+    </div>
+
+<script type="module">
+    import { firestoreDb, realtimeDb } from './firebase-config.js';
+    import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { initializePresence, activatePlayerPresence } from './presence.js';
+    import { initializeStageManager } from './stage-manager.js';
+
+    // Central state object to store answers dynamically
+    const userAnswers = {};
+
+    // 1. Explicitly Untether Device on Quiz Load
+    async function untetherDevice() {
+      const player = sessionStorage.getItem('playerIdentity');
+      if (player) {
+        const updates = {};
+        updates[`players/playersConnected/${player}`] = false;
+        updates[`players/deviceMapping/${player}`] = ""; 
+        
+        await update(ref(realtimeDb), updates);
+        sessionStorage.removeItem('playerIdentity');
+        console.log(`Device untethered from ${player}. Free to select a new player.`);
+      }
+    }
+
+    // 2. Ignite Background Engines AFTER Untethering
+    untetherDevice().then(() => {
+      initializePresence();
+      initializeStageManager();
+    });
+
+    // --- INITIALIZE HOME FRAME ---
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        const loginCard = document.getElementById('qcard-0');
+        loginCard.style.display = 'block';
+        loginCard.scrollIntoView({ behavior: 'auto', block: 'center' });
+      }, 50);
+    });
+
+    // --- PHASE 1: REALTIME DATABASE PRESENCE UI ---
+    const presenceRef = ref(realtimeDb, 'players');
+
+    onValue(presenceRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      const connected = data.playersConnected || {}; 
+      const deviceMapping = data.deviceMapping || {}; // <-- Pull device mappings
+      const optionsContainer = document.getElementById('login-options');
+      const localPlayer = sessionStorage.getItem('playerIdentity');
+      
+      // We still iterate over 'connected' just to get the full roster of player names
+      Object.keys(connected).forEach(playerName => {
+        let btn = document.getElementById(`login-btn-${playerName}`);
+        
+        if (!btn) {
+          btn = document.createElement('button');
+          btn.id = `login-btn-${playerName}`;
+          btn.className = 'monopoly-btn';
+          btn.innerText = playerName;
+          
+          btn.onclick = () => {
+            // Extra safety: block the click entirely if it's already mapped to someone else
+            const isMapped = deviceMapping[playerName] && deviceMapping[playerName] !== "";
+            if (isMapped && localPlayer !== playerName) return; 
+
+            activatePlayerPresence(playerName);
+            revealAndScrollToNext(0);
+          };
+          
+          optionsContainer.appendChild(btn);
+        }
+
+        // Reset classes for dynamic updating
+        btn.className = 'monopoly-btn'; 
+        
+        // Determine if this specific player is actively tethered to a device
+        const isMapped = deviceMapping[playerName] && deviceMapping[playerName] !== "";
+
+        if (localPlayer === playerName) {
+          btn.classList.add('selected-option'); // It's you
+        } else if (isMapped) {
+          btn.classList.add('disabled-option'); // Someone else's device claimed this
+        }
+      });
+    });
+
+    // --- PHASE 2: FIRESTORE DATA MANIFEST GENERATION ---
+    async function initQuizEngine() {
+      try {
+        const [configSnap, questionsSnap] = await Promise.all([
+          getDoc(doc(firestoreDb, "quiz", "config")),
+          getDoc(doc(firestoreDb, "quiz", "questions"))
+        ]);
+
+        if (configSnap.exists() && questionsSnap.exists()) {
+          const qOrder = configSnap.data().questionOrder || [];
+          const qData = questionsSnap.data() || {};
+          buildHiddenDeck(qOrder, qData);
+        }
+      } catch (error) {
+        console.error("Firestore loading sequence failure:", error);
+      }
+    }
+
+    function buildHiddenDeck(qOrder, qData) {
+      const targetDiv = document.getElementById('dynamic-questions');
+
+      qOrder.forEach((qId, index) => {
+        const qConfig = qData[qId];
+        const currentCardIndex = index + 1;
+
+        if (qConfig.type === "slider") {
+          userAnswers[qId] = 5; 
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'element-wrapper q-card-wrapper';
+        wrapper.id = `qcard-${currentCardIndex}`;
+
+        wrapper.innerHTML = `
+          <div class="surface-box monopoly-deed">
+            <div class="deed-header">QUESTION ${currentCardIndex}</div>
+            <div class="deed-body" id="qbody-${currentCardIndex}">
+              <div class="question-text">${qConfig.text}</div>
+            </div>
+          </div>
+        `;
+        targetDiv.appendChild(wrapper);
+        
+        if (window.observeCard) window.observeCard(wrapper); 
+
+        const cardBody = document.getElementById(`qbody-${currentCardIndex}`);
+
+        if (qConfig.type === "choice" && qConfig.options) {
+          const btnContainer = document.createElement('div');
+          btnContainer.className = 'options-container';
+          
+          qConfig.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'monopoly-btn';
+            btn.innerText = opt;
+            btn.onclick = () => {
+              Array.from(btnContainer.children).forEach(b => b.classList.remove('selected-option'));
+              btn.classList.add('selected-option');
+              
+              userAnswers[qId] = opt; 
+              revealAndScrollToNext(currentCardIndex);
+            };
+            btnContainer.appendChild(btn);
+          });
+          
+          cardBody.appendChild(btnContainer);
+        } 
+        else if (qConfig.type === "slider") {
+          const slider = document.createElement('input');
+          slider.type = 'range';
+          slider.min = 0;
+          slider.max = 10;
+          slider.value = 5;
+          slider.className = 'monopoly-slider';
+          slider.onchange = () => {
+            userAnswers[qId] = slider.value;
+            revealAndScrollToNext(currentCardIndex);
+          };
+          cardBody.appendChild(slider);
+        }
+      });
+
+      // Create Final Submission Node
+      const submitWrapper = document.createElement('div');
+      submitWrapper.className = 'element-wrapper q-card-wrapper';
+      submitWrapper.id = `qcard-${qOrder.length + 1}`;
+      submitWrapper.innerHTML = `
+        <div class="surface-box monopoly-deed" style="border-color: #4CAF50;">
+          <div class="deed-header" style="background-color: #4CAF50;">DONE?</div>
+          <div class="deed-body">
+            <button id="submit-quiz-btn" class="monopoly-btn" style="width: 100%; border-color:#4CAF50; color:#4CAF50;">SUBMIT ANSWERS</button>
+          </div>
+        </div>
+      `;
+      targetDiv.appendChild(submitWrapper);
+      
+      if (window.observeCard) window.observeCard(submitWrapper);
+
+      // --- SUBMISSION LOGIC ---
+      const submitBtn = document.getElementById('submit-quiz-btn');
+      submitBtn.onclick = async () => {
+        const playerIdentity = sessionStorage.getItem('playerIdentity');
+        
+        if (!playerIdentity) {
+          alert("Whoops! No active player identity found. Please scroll to the top and select a player.");
+          return;
+        }
+
+        try {
+          submitBtn.disabled = true;
+          submitBtn.innerText = "SAVING RESPONSES...";
+
+          // 1. Point directly to collection "quiz", document "results"
+          const firestoreDocRef = doc(firestoreDb, "quiz", "results");
+          
+          // Build payload using computed property name for the player
+          const dynamicPayload = {
+            [playerIdentity]: userAnswers
+          };
+
+          // Crucial: merge preserves other fields (other players' answers) in the document
+          await setDoc(firestoreDocRef, dynamicPayload, { merge: true });
+
+          // 2. Change global game stage state to 'waiting' in the Realtime Database
+          // This satisfies stage-manager.js rules for routing to lobby.html
+          await update(ref(realtimeDb), {
+            "gameState/stage": "waiting"
+          });
+
+          console.log(`Answers recorded under key "${playerIdentity}" inside quiz/results!`);
+
+          // 3. Hand off the routing to the page transition
+          window.location.href = 'lobby.html';
+
+        } catch (error) {
+          console.error("Submission pipeline failed: ", error);
+          alert("Failed to sync answers. Check your console logs.");
+          submitBtn.disabled = false;
+          submitBtn.innerText = "SUBMIT ANSWERS";
+        }
+      };
+    }
+
+    // --- PHASE 3: CAMERA CONTROLLER ---
+    function revealAndScrollToNext(currentIndex) {
+      const nextCardIndex = currentIndex + 1;
+      const nextCard = document.getElementById(`qcard-${nextCardIndex}`);
+      
+      if (nextCard) {
+        nextCard.style.display = 'block';
+        setTimeout(() => {
+          nextCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50); 
+      }
+    }
+
+    // Ignition
+    initQuizEngine();
+</script>
+  </body>
+</html>

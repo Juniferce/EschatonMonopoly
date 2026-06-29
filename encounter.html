@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eschaton - Encounter</title>
+  <link rel="stylesheet" href="effects.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background: radial-gradient(circle at center, #111 0%, #000 100%);
+      color: #fff; font-family: 'Arial', sans-serif;
+      height: 100vh; overflow: hidden; position: relative;
+    }
+    
+    .wiggle { animation: extremeWiggle 0.4s infinite linear !important; }
+
+    /* =========================================
+       LAYOUT STRUCTURE (FLEXBOX)
+       ========================================= */
+    #main-layout {
+      display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+      height: 100vh; padding: 20px; gap: 20px; box-sizing: border-box; overflow: hidden;
+    }
+
+    /* =========================================
+       DICE SECTIONS (OUTLINED POOLS)
+       ========================================= */
+    .dice-section {
+      width: 100%; max-width: 900px;
+      border: 2px dotted rgba(255, 255, 255, 0.3);
+      border-radius: 16px; padding: 15px 20px;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+      flex-shrink: 0;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .pool-title { font-size: 14px; color: #ccc; text-transform: uppercase; letter-spacing: 4px; font-weight: bold; }
+    .pool-container {
+      display: flex; gap: 15px; justify-content: center; align-items: center; flex-wrap: wrap;
+      min-height: 60px; width: 100%;
+    }
+
+    /* =========================================
+       CENTER STAGE (NARRATION & BOARDS)
+       ========================================= */
+    #center-stage {
+      flex-grow: 1; width: 100%; max-width: 1000px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      position: relative;
+      overflow: visible;
+    }
+    
+    #narration-container { 
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100%; max-width: 800px; min-height: 80px; z-index: 20; 
+      display: flex; justify-content: center; align-items: center;
+      transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1), transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), top 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+      transform-origin: center center;
+      background: transparent;
+      border-radius: 12px;
+      padding: 15px;
+      border: none;
+      opacity: 1;
+      pointer-events: auto;
+    }
+    
+    /* Dice sections are always visible */
+    .dice-section {
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      transform: none !important;
+      display: flex !important;
+    }
+
+    /* Active boards display both elements cleanly together */
+    #active-boards {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    #resolution-board {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      width: 90%;
+      max-width: 800px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      z-index: 15;
+    }
+    #moves-board-container {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translate(-50%, 120%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      width: 100%;
+      max-width: 1000px;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.6s ease;
+      z-index: 18;
+    }
+
+    /* Phase Specific States */
+    body.enc-phase-narration #narration-container {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    body.enc-phase-narration #resolution-board {
+      opacity: 0;
+      pointer-events: none;
+    }
+    body.enc-phase-narration #moves-board-container {
+      opacity: 0;
+      transform: translate(-50%, 120%);
+      pointer-events: none;
+    }
+
+    body.enc-phase-requesting #narration-container {
+      opacity: 1;
+      pointer-events: auto;
+      top: 30%;
+      transform: translate(-50%, -50%) scale(0.8);
+    }
+    body.enc-phase-requesting #resolution-board {
+      opacity: 0;
+      pointer-events: none;
+    }
+    body.enc-phase-requesting #moves-board-container {
+      opacity: 1;
+      transform: translate(-50%, 0);
+      pointer-events: auto;
+    }
+
+    body.enc-phase-submitted #narration-container {
+      opacity: 1;
+      pointer-events: auto;
+      top: 50%;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    body.enc-phase-submitted #resolution-board {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    body.enc-phase-submitted #moves-board-container {
+      opacity: 0;
+      transform: translate(-50%, 120%);
+      pointer-events: none;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* =========================================
+       RESOLUTION POOLS
+       ========================================= */
+    #resolution-board {
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+      width: 90%; max-width: 800px;
+    }
+
+    .res-pool-section { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+    .res-pool-title { font-size: 12px; color: #fff; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+    .res-pool-dice {
+      display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; min-height: 80px; width: 100%;
+      padding: 15px 30px; background: rgba(0,0,0,0.4); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.3);
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+    }
+
+    .res-die-wrapper { 
+      display: flex; flex-direction: column; align-items: center; gap: 5px; 
+      transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.5s ease;
+    }
+    .res-die-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; background: rgba(0,0,0,0.85); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); }
+
+    /* =========================================
+       INDIVIDUAL DICE CSS
+       ========================================= */
+    .die-wrapper { display: inline-block; cursor: grab; transition: filter 0.2s; user-select: none; position: relative; }
+    .die-wrapper:active { cursor: grabbing; }
+    .die { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; color: #fff; position: relative; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.8)); }
+    .die-svg {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 0; pointer-events: none;
+    }
+    .die-svg path {
+      fill: var(--bg-color, rgba(0, 0, 0, 0.6));
+      stroke: var(--border-color, #fff);
+      stroke-width: 8px;
+    }
+    .die-text { z-index: 2; pointer-events: none; text-shadow: 0 0 4px #000, 0 2px 4px #000; font-family: monospace; }
+    
+    .die-wrapper.state-used { display: none !important; }
+    .die-wrapper.state-locked { transform: scale(0.85); filter: saturate(0.3); pointer-events: none; }
+    .die-wrapper.state-grabbed { opacity: 0.3; pointer-events: none; }
+    
+    .die-clone { position: absolute; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%) scale(1.1); opacity: 0.9; }
+
+    @keyframes dieLift {
+      0% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-50px) scale(1.5); }
+      100% { transform: translateY(0) scale(1); }
+    }
+    .die-wrapper.state-rolling { pointer-events: none; animation: dieLift 2s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+
+    /* =========================================
+       MOVES CONTAINER
+       ========================================= */
+    #moves-board-container {
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+      width: 100%; max-width: 1000px;
+    }
+
+    #moves-container {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;
+      background: rgba(15, 15, 15, 0.85); border: 2px solid #333; border-radius: 12px;
+      padding: 25px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+      backdrop-filter: blur(10px); align-items: stretch; justify-items: center;
+    }
+
+    /* Interactive Contextual Action Button & Reset Elements */
+    #btn-primary-move {
+      background: #222; color: #aaa; border: 2px solid #555;
+      padding: 12px 40px; font-size: 16px; font-weight: bold; border-radius: 6px;
+      cursor: pointer; text-transform: uppercase; transition: all 0.3s ease; letter-spacing: 2px;
+    }
+    #btn-primary-move:hover:not(:disabled) { background: #008b00; color: #fff; box-shadow: 0 0 25px #00ff00; }
+    #btn-primary-move:disabled { opacity: 0.5; cursor: not-allowed; border-color: #333; color: #888; background: #111; }
+
+    #btn-cancel-move {
+      background: #3a1111; color: #ff6666; border: 2px solid #8b0000;
+      padding: 12px 25px; font-size: 16px; font-weight: bold; border-radius: 6px;
+      cursor: pointer; text-transform: uppercase; transition: all 0.2s; letter-spacing: 2px;
+    }
+    #btn-cancel-move:hover { background: #8b0000; color: #fff; box-shadow: 0 0 15px #ff3333; }
+
+    .move-card {
+      background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(5, 5, 5, 0.95) 100%);
+      border: 2px solid var(--move-color, #333);
+      border-radius: 8px; width: 100%; max-width: 250px;
+      padding: 15px; display: flex; flex-direction: column; gap: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(255,255,255,0.03); 
+      position: relative; overflow: hidden;
+    }
+
+    .move-card::before {
+      content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--move-color, #fff), transparent);
+      opacity: 0.5;
+    }
+
+    .move-title { 
+      font-size: 14px; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; 
+      text-align: center; text-shadow: 0 2px 5px rgba(0,0,0,1); 
+      border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 2px;
+    }
+    .move-desc { font-size: 11px; color: #bbb; text-align: center; min-height: 40px; line-height: 1.4; }
+    
+    .move-slots { display: flex; gap: 10px; justify-content: center; margin-top: auto; padding-top: 5px; }
+    .move-slot {
+      width: 45px; height: 45px; position: relative; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
+    }
+    .move-slot > .die-svg path { fill: rgba(0,0,0,0.5); stroke: #555; }
+    .move-slot.drag-over > .die-svg path { stroke: var(--move-color, #fff); fill: rgba(255,255,255,0.1); }
+    .move-slot.drag-over { transform: scale(1.1); filter: drop-shadow(0 0 10px var(--move-color, #fff)); }
+  </style>
+</head>
+<body class="phase-idle enc-phase-narration">
+
+  <svg width="0" height="0" style="position:absolute; z-index:-1;">
+    <defs>
+      <filter id="extreme-1"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="1" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+      <filter id="extreme-2"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="2" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+      <filter id="extreme-3"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="3" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+      <filter id="extreme-4"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="4" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+    </defs>
+  </svg>
+
+  <div id="main-layout">
+    
+    <div class="dice-section wiggle">
+      <div class="pool-title">Encounter Pool</div>
+      <div id="encounter-pool-container" class="pool-container"></div>
+    </div>
+
+    <div id="center-stage">
+      <div id="narration-container" class="wiggle"></div>
+      
+      <div id="active-boards" style="width: 100%; display: flex; justify-content: center;">
+        <div id="resolution-board" class="wiggle">
+          <div class="res-pool-section">
+            <div class="res-pool-title">Instance Pool</div>
+            <div id="res-instance-pool" class="res-pool-dice"></div>
+          </div>
+          <div class="res-pool-section">
+            <div class="res-pool-title">World/Environment Pool</div>
+            <div id="res-world-pool" class="res-pool-dice"></div>
+          </div>
+          <div class="res-pool-section">
+            <div class="res-pool-title">Karask Pool</div>
+            <div id="res-karask-pool" class="res-pool-dice"></div>
+          </div>
+        </div>
+        
+        <div id="moves-board-container" class="wiggle">
+          <div id="moves-container"></div>
+          <div style="display: flex; gap: 15px; margin-top: 10px;">
+              <button id="btn-cancel-move" style="display: none;">RESET STAGED</button>
+              <button id="btn-primary-move" class="state-pass">PASS</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dice-section wiggle">
+      <div class="pool-title">Player Pool</div>
+      <div id="player-pool-container" class="pool-container"></div>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { initializeStageManager } from './stage-manager.js';
+    import { initializePresence } from './presence.js'; 
+    import { realtimeDb, firestoreDb } from './firebase-config.js';
+    import { ref, get, update, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { igniteNarrationEngine } from './narration-display.js';
+
+    initializeStageManager();
+    initializePresence();
+
+    let localPlayer = null;
+    let localShardId = null;
+    
+    let planesConfig = {};
+    let allMovesData = {};
+    let activeEncounterController = null;
+    let encounterPhase = 'narration';
+    
+    let playerDicePool = [];
+    let encounterDicePool = [];
+    let resolutionPools = { instancePool: {}, worldPool: {}, karaskPool: {} };
+    let localShardData = {};
+    let isResolving = false;
+    let resolutionStartTime = 0;
+    let playerPlaneColor = '#ffffff';
+
+    let isDragging = false;
+    let dragSource = null; 
+    let draggedIndex = null;
+    let cloneEl = null;
+
+    let stagedMoveSelection = null; 
+
+    window.getShapeSVG = function(size, isDashed = false) {
+        let d = '';
+        switch(parseInt(size) || 6) {
+            case 4: d = 'M50,15 L15,85 L85,85 Z'; break;
+            case 6: d = 'M15,15 L85,15 L85,85 L15,85 Z'; break;
+            case 8: d = 'M50,15 L85,50 L50,85 L15,50 Z'; break;
+            case 10: d = 'M50,15 L85,35 L50,85 L15,35 Z'; break;
+            case 12: d = 'M50,15 L85,38 L75,85 L25,85 L15,38 Z'; break;
+            case 20: d = 'M30,15 L70,15 L85,50 L70,85 L30,85 L15,50 Z'; break;
+            default: d = 'M15,15 L85,15 L85,85 L15,85 Z';
+        }
+        const dash = isDashed ? 'stroke-dasharray="8 8"' : '';
+        return `<svg viewBox="0 0 100 100" class="die-svg"><path d="${d}" stroke-width="8" stroke-linejoin="round" ${dash} /></svg>`;
+    };
+
+    async function verifyAccess() {
+      const localDeviceId = localStorage.getItem('deviceId');
+      if (!localDeviceId) { window.location.href = 'index.html'; return; }
+      try {
+        const mappingSnap = await get(ref(realtimeDb, 'players/deviceMapping'));
+        const mapping = mappingSnap.val() || {};
+        for (const [playerName, mappedId] of Object.entries(mapping)) { if (mappedId === localDeviceId) { localPlayer = playerName; break; } }
+        if (!localPlayer) { window.location.href = 'index.html'; return; }
+
+        const shardMapSnap = await get(ref(realtimeDb, 'players/shardMapping'));
+        const shardMap = shardMapSnap.val() || {};
+        for (const [shardId, playerName] of Object.entries(shardMap)) { if (playerName === localPlayer) { localShardId = shardId; break; } }
+
+        igniteNarrationEngine('narration-container');
+        await loadStaticData();
+        initializeEncounterEngine();
+      } catch (error) { 
+        console.error("Gatekeeper error: ", error); 
+        window.location.href = 'index.html';
+      }
+    }
+
+    async function loadStaticData() {
+        const pSnap = await getDocs(collection(firestoreDb, "planes"));
+        pSnap.forEach(doc => { planesConfig[doc.id] = doc.data().config || {}; });
+
+        const mSnap = await getDocs(collection(firestoreDb, "moves"));
+        mSnap.forEach(doc => {
+            const category = doc.id;
+            const moves = doc.data();
+            Object.entries(moves).forEach(([moveId, moveData]) => {
+                moveData.category = category;
+                if (!moveData.slots || typeof moveData.slots === 'number') {
+                    const count = typeof moveData.slots === 'number' ? moveData.slots : 1;
+                    moveData.slots = Array(count).fill({ sizeReq: 'any', valReqType: 'none', valReq: 0 });
+                    moveData.outputs = [{ targetPool: moveData.targetPool || 'instancePool', type: moveData.type || 'strike', tag: moveData.tag || '', size: 4 }];
+                }
+                allMovesData[moveId] = moveData;
+            });
+        });
+    }
+
+    function initializeEncounterEngine() {
+        onValue(ref(realtimeDb, 'gameState/encounter'), snap => {
+            const data = snap.val() || {};
+            activeEncounterController = data.controller || null;
+            encounterPhase = data.phase || 'narration';
+            updatePhase();
+        });
+
+        let initialMoveLoad = true;
+        onValue(ref(realtimeDb, 'gameState/movesVersion'), async snap => {
+            if (!snap.exists()) return;
+            if (initialMoveLoad) { initialMoveLoad = false; return; }
+            await loadStaticData();
+            if (stagedMoveSelection && !allMovesData[stagedMoveSelection.moveId]) {
+                Object.values(stagedMoveSelection.slots).forEach(d => {
+                     update(ref(realtimeDb, d.sourcePath), { state: 'ready' });
+                });
+                stagedMoveSelection = null;
+            } else if (stagedMoveSelection) {
+                stagedMoveSelection.moveData = allMovesData[stagedMoveSelection.moveId];
+            }
+            const currentAssignedMoves = localShardId ? (playerDicePool?.moves || []) : [];
+            if (currentAssignedMoves.length > 0) { renderMoves(currentAssignedMoves); }
+        });
+
+        if (localShardId) {
+            onValue(ref(realtimeDb, `gameState/shards/${localShardId}`), snap => {
+                const sData = snap.val() || {};
+                    localShardData = sData;
+                if (sData.plane && planesConfig[sData.plane]) {
+                    playerPlaneColor = planesConfig[sData.plane].color || '#ffffff';
+                }
+                const playerSection = document.querySelector('#player-pool-container').parentElement;
+                playerSection.style.borderColor = playerPlaneColor;
+                playerSection.style.boxShadow = `inset 0 0 20px ${playerPlaneColor}40`;
+                playerSection.querySelector('.pool-title').style.color = playerPlaneColor;
+                const xp = sData.xp || 0;
+                playerSection.querySelector('.pool-title').innerText = `Player Pool (XP: ${xp})`;
+
+                playerDicePool = sData.dicepool || [];
+                renderPool(document.getElementById('player-pool-container'), playerDicePool, 'player', playerPlaneColor);
+                
+                const assignedMoves = sData.moves || [];
+                renderMoves(assignedMoves);
+            });
+        }
+
+        onValue(ref(realtimeDb, 'gameState/encounter/dicepool'), snap => {
+            encounterDicePool = snap.val() || [];
+            renderPool(document.getElementById('encounter-pool-container'), encounterDicePool, 'encounter');
+        });
+
+        onValue(ref(realtimeDb, 'gameState/encounter/resolving'), snap => {
+            const val = snap.val() || false;
+            if (val && !isResolving) {
+                resolutionStartTime = Date.now();
+            }
+            isResolving = val;
+            if (document.startViewTransition) {
+                document.startViewTransition(() => renderResolutionPools());
+            } else {
+                renderResolutionPools();
+            }
+        });
+
+        onValue(ref(realtimeDb, 'gameState/resolutionPools'), snap => {
+            resolutionPools = snap.val() || { instancePool: {}, worldPool: {}, karaskPool: {} };
+            if (document.startViewTransition) {
+                document.startViewTransition(() => renderResolutionPools());
+            } else {
+                renderResolutionPools();
+            }
+        });
+    }
+
+    function renderResolutionPools() {
+        const board = document.getElementById('resolution-board');
+        if (!board) return;
+        
+        board.innerHTML = '';
+        const knownPoolNames = {
+            instancePool: 'Instance Pool',
+            worldPool: 'World/Environment Pool',
+            karaskPool: 'Karask Pool'
+        };
+
+        Object.entries(resolutionPools).forEach(([poolName, poolObj]) => {
+            if (!poolObj) return;
+            const diceEntries = Object.entries(poolObj);
+            if (diceEntries.length === 0) return;
+
+            const sectionEl = document.createElement('div');
+            sectionEl.className = 'res-pool-section';
+            sectionEl.style.display = 'flex';
+
+            let displayName = knownPoolNames[poolName] || poolName.replace(/_/g, ' ').toUpperCase();
+
+            const titleEl = document.createElement('div');
+            titleEl.className = 'res-pool-title';
+            titleEl.innerText = displayName;
+
+            const container = document.createElement('div');
+            container.className = 'res-pool-dice';
+            container.id = `res-pool-${poolName}`;
+
+            diceEntries.forEach(([dieId, die]) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = `res-die-wrapper res-type-${die.type}`;
+                const safeDieId = dieId.replace(/[^a-zA-Z0-9_-]/g, '_');
+                wrapper.style.viewTransitionName = `die-${safeDieId}`;
+
+                const visual = document.createElement('div');
+                visual.className = `die d${die.size} wiggle`;
+                
+                const now = Date.now();
+                const rollDuration = 600;
+                const isRolling = isResolving && (now - resolutionStartTime < rollDuration);
+
+                let displaySide = die.side;
+                if (isRolling) {
+                    visual.classList.add('state-rolling');
+                    displaySide = Math.floor(Math.random() * die.size) + 1;
+                }
+
+                let textContent = '';
+                if (isResolving) {
+                    if (isRolling) {
+                        textContent = `<span class="die-text res-rolling-text" data-size="${die.size}" data-final="${die.side}">${displaySide}</span>`;
+                    } else {
+                        textContent = die.side ? `<span class="die-text">${die.side}</span>` : '';
+                    }
+                } else {
+                    textContent = `<span class="die-text" style="display: none;"></span>`;
+                }
+
+                visual.innerHTML = window.getShapeSVG(die.size) + textContent;
+                
+                let srcColor = '#ffffff';
+                let srcLabel = (die.source || 'Unknown').replace(/_/g, ' ');
+                if (die.type === 'guard') srcColor = '#ffff33'; // yellow
+                else if (die.type === 'maneuver') srcColor = '#33ccff'; // light blue
+                else if (die.type === 'strike') srcColor = '#ff3333'; // red
+
+                visual.style.setProperty('--border-color', srcColor);
+                visual.style.setProperty('--bg-color', `${srcColor}33`);
+                visual.title = `Source: ${srcLabel}`;
+
+                const label = document.createElement('div');
+                label.className = 'res-die-tag';
+                label.style.color = srcColor;
+                label.style.borderColor = `${srcColor}80`;
+                label.innerText = `${die.type} [${srcLabel}]` + (die.tag ? ` • ${die.tag}` : '');
+
+                wrapper.appendChild(visual);
+                wrapper.appendChild(label);
+                container.appendChild(wrapper);
+            });
+
+            sectionEl.appendChild(titleEl);
+            sectionEl.appendChild(container);
+            board.appendChild(sectionEl);
+        });
+    }
+
+    function updatePhase() {
+        // Appends the active/idle status alongside the precise game state machine tracker class
+        document.body.className = `${activeEncounterController ? 'phase-active' : 'phase-idle'} enc-phase-${encounterPhase}`;
+    }
+
+    function renderMoves(assignedMoveIds) {
+        const container = document.getElementById('moves-container');
+        container.innerHTML = '';
+        
+        assignedMoveIds.forEach(moveId => {
+            const moveData = allMovesData[moveId];
+            if (!moveData) return;
+
+            const category = moveData.category;
+            let moveColor = '#666';
+            if (category === 'karask') moveColor = '#888';
+            else if (planesConfig[category] && planesConfig[category].color) {
+                moveColor = planesConfig[category].color;
+            }
+
+            const card = document.createElement('div');
+            card.className = 'move-card wiggle';
+            card.dataset.moveId = moveId;
+            card.style.setProperty('--move-color', moveColor);
+            card.style.borderColor = moveColor;
+
+            const slotsHTML = moveData.slots.map((slot, index) => {
+                let slotReqClass = '';
+                if (slot.sizeReq && slot.sizeReq !== 'any') {
+                    slotReqClass = `req-d${slot.sizeReq}`;
+                }
+                let reqText = '';
+                if (slot.valReqType !== 'none') {
+                    reqText = `<div style="position:absolute; bottom:-18px; font-size:9px; color:#aaa; width:100%; text-align:center;">${slot.valReqType} ${slot.valReq}</div>`;
+                }
+                const slotSVG = window.getShapeSVG(slot.sizeReq === 'any' ? 6 : slot.sizeReq, true);
+                return `<div class="move-slot ${slotReqClass}" data-slot-index="${index}">${slotSVG}${reqText}</div>`;
+            }).join('');
+
+            card.innerHTML = `
+                <div class="move-title" style="color: ${moveColor}">${moveData.title || 'Unknown Move'}</div>
+                <div class="move-desc">${moveData.description || ''}</div>
+                <div class="move-slots">${slotsHTML}</div>
+            `;
+            
+            const slots = card.querySelectorAll('.move-slot');
+            slots.forEach((slot, index) => {
+                slot.onmouseenter = () => { if (isDragging) slot.classList.add('drag-over'); };
+                slot.onmouseleave = () => { slot.classList.remove('drag-over'); };
+                slot.onmouseup = () => handleDropOnSlot(slot, index, moveId, moveData);
+            });
+
+            container.appendChild(card);
+        });
+        
+        renderStagedMoveUI();
+    }
+
+    function renderStagedMoveUI() {
+        document.querySelectorAll('.move-slot').forEach(s => {
+             Array.from(s.children).forEach(c => { if(c.classList.contains('die')) c.remove(); });
+        });
+        const btnPrimary = document.getElementById('btn-primary-move');
+        const btnCancel = document.getElementById('btn-cancel-move');
+
+        if (stagedMoveSelection && Object.keys(stagedMoveSelection.slots).length > 0) {
+            btnCancel.style.display = 'block';
+            
+            const card = document.querySelector(`.move-card[data-move-id="${stagedMoveSelection.moveId}"]`);
+            if (card) {
+                Object.entries(stagedMoveSelection.slots).forEach(([slotIndex, dieData]) => {
+                    if (!dieData) return;
+                    const slotEl = card.querySelector(`.move-slot[data-slot-index="${slotIndex}"]`);
+                    if (slotEl) {
+                        const dieEl = document.createElement('div');
+                        dieEl.className = `die d${dieData.size} wiggle`;
+                        dieEl.style.cursor = 'grab';
+                        dieEl.title = "Drag to reset or shift";
+                        dieEl.innerHTML = window.getShapeSVG(dieData.size) + `<span class="die-text">${dieData.side}</span>`;
+                        dieEl.style.position = 'absolute';
+                        dieEl.style.top = '0'; dieEl.style.left = '0'; dieEl.style.width = '100%'; dieEl.style.height = '100%';
+                        
+                        if (dieData.color) {
+                            dieEl.style.setProperty('--border-color', dieData.color);
+                            dieEl.style.setProperty('--bg-color', `${dieData.color}40`);
+                        }
+
+                        dieEl.onmousedown = (e) => {
+                            if (isDragging) return;
+                            isDragging = true;
+                            dragSource = 'staged';
+                            draggedIndex = slotIndex; 
+                            
+                            cloneEl = document.createElement('div');
+                            cloneEl.className = `die d${dieData.size} die-clone`;
+                            cloneEl.innerHTML = window.getShapeSVG(dieData.size) + `<span class="die-text">${dieData.side}</span>`;
+                            cloneEl.style.left = `${e.clientX}px`; cloneEl.style.top = `${e.clientY}px`;
+                            if (dieData.color) { 
+                                cloneEl.style.setProperty('--border-color', dieData.color);
+                                cloneEl.style.setProperty('--bg-color', `${dieData.color}40`);
+                            }
+                            document.body.appendChild(cloneEl);
+
+                            dieEl.style.opacity = '0.3';
+                            document.addEventListener('mousemove', dragMove);
+                            document.addEventListener('mouseup', endDrag);
+                        };
+                        slotEl.appendChild(dieEl);
+                    }
+                });
+            }
+            
+            const requiredSlots = stagedMoveSelection.moveData.slots.length;
+            const filledSlots = Object.keys(stagedMoveSelection.slots).length;
+            
+            if (filledSlots >= requiredSlots) {
+                btnPrimary.innerText = 'CONFIRM';
+            } else {
+                btnPrimary.innerText = 'PASS';
+            }
+            btnPrimary.disabled = false;
+        } else {
+            btnCancel.style.display = 'none';
+            btnPrimary.innerText = 'PASS';
+            btnPrimary.disabled = false;
+        }
+    }
+
+    function renderPool(container, pool, sourceType, customColor = null) {
+        container.innerHTML = '';
+        
+        // Robust normalization of array or object keys to avoid firebase .forEach exceptions
+        const poolEntries = [];
+        if (Array.isArray(pool)) {
+            pool.forEach((die, idx) => { if (die) poolEntries.push({ die, index: idx }); });
+        } else if (pool && typeof pool === 'object') {
+            Object.entries(pool).forEach(([key, die]) => { if (die) poolEntries.push({ die, index: key }); });
+        }
+
+        poolEntries.forEach(({ die, index }) => {
+            if (die.state === 'used') return;
+            const wrapper = document.createElement('div');
+            wrapper.className = `die-wrapper state-${die.state}`;
+            wrapper.dataset.index = index; 
+            wrapper.dataset.size = die.size;
+            wrapper.dataset.side = die.side;
+            wrapper.dataset.rollTime = die.rollTime || 0;
+            wrapper.dataset.source = sourceType;
+            wrapper.dataset.color = customColor || '';
+            
+            const visual = document.createElement('div');
+            visual.className = `die d${die.size} wiggle`;
+            visual.innerHTML = window.getShapeSVG(die.size) + `<span class="die-text">${die.side}</span>`;
+            
+            if (customColor) {
+                visual.style.setProperty('--border-color', customColor);
+                visual.style.setProperty('--bg-color', `${customColor}40`);
+            }
+
+            wrapper.appendChild(visual);
+
+            if (die.state === 'ready') {
+                if (sourceType === 'player' || (sourceType === 'encounter' && activeEncounterController === localShardId)) {
+                    wrapper.onmousedown = (e) => startDrag(e, index, wrapper, sourceType);
+                }
+            }
+            container.appendChild(wrapper);
+        });
+    }
+
+    function startDrag(e, index, originalWrapper, sourceType) {
+        if (isDragging) return;
+        isDragging = true;
+        dragSource = sourceType;
+        draggedIndex = index;
+
+        const path = sourceType === 'player' 
+            ? `gameState/shards/${localShardId}/dicepool/${index}`
+            : `gameState/encounter/dicepool/${index}`;
+        update(ref(realtimeDb, path), { state: 'grabbed' });
+
+        cloneEl = originalWrapper.cloneNode(true);
+        cloneEl.className = originalWrapper.className.replace('state-ready', '').replace('state-grabbed', '') + ' die-clone';
+        cloneEl.style.left = `${e.clientX}px`; cloneEl.style.top = `${e.clientY}px`;
+        document.body.appendChild(cloneEl);
+
+        document.addEventListener('mousemove', dragMove);
+        document.addEventListener('mouseup', endDrag);
+    }
+
+    function dragMove(e) {
+        if (!isDragging || !cloneEl) return;
+        cloneEl.style.left = `${e.clientX}px`; cloneEl.style.top = `${e.clientY}px`;
+    }
+
+    function endDrag(e) {
+        if (!isDragging) return;
+        setTimeout(() => {
+            if (isDragging) { 
+                if (dragSource === 'staged') {
+                    const dieData = stagedMoveSelection.slots[draggedIndex];
+                    if (dieData) {
+                        update(ref(realtimeDb, dieData.sourcePath), { state: 'ready' });
+                        delete stagedMoveSelection.slots[draggedIndex];
+                        if (Object.keys(stagedMoveSelection.slots).length === 0) stagedMoveSelection = null;
+                        renderStagedMoveUI();
+                    }
+                } else {
+                    const path = dragSource === 'player' 
+                        ? `gameState/shards/${localShardId}/dicepool/${draggedIndex}`
+                        : `gameState/encounter/dicepool/${draggedIndex}`;
+                    update(ref(realtimeDb, path), { state: 'ready' });
+                }
+                cleanupDrag();
+            }
+        }, 10);
+    }
+
+    function handleDropOnSlot(slot, slotIndex, moveId, moveData) {
+        if (!isDragging) return;
+        slot.classList.remove('drag-over');
+        const slotReq = moveData.slots[slotIndex];
+        let newSourcePath, newSize, newSide, newColor;
+
+        if (dragSource === 'staged') {
+            const oldSlotIndex = draggedIndex;
+            const dieData = stagedMoveSelection.slots[oldSlotIndex];
+            newSourcePath = dieData.sourcePath;
+            newSize = dieData.size;
+            newSide = dieData.side;
+            newColor = dieData.color;
+
+            if (stagedMoveSelection.moveId === moveId && oldSlotIndex == slotIndex) {
+                cleanupDrag(); renderStagedMoveUI(); return;
+            }
+            if (slotReq.sizeReq !== 'any' && parseInt(slotReq.sizeReq) !== parseInt(newSize)) {
+                cleanupDrag(); renderStagedMoveUI(); return;
+            }
+            if (slotReq.valReqType !== 'none') {
+                const val = parseInt(newSide); const req = parseInt(slotReq.valReq);
+                if (slotReq.valReqType === '>=' && val < req) { cleanupDrag(); renderStagedMoveUI(); return; }
+                if (slotReq.valReqType === '<=' && val > req) { cleanupDrag(); renderStagedMoveUI(); return; }
+                if (slotReq.valReqType === '=' && val !== req) { cleanupDrag(); renderStagedMoveUI(); return; }
+            }
+            delete stagedMoveSelection.slots[oldSlotIndex];
+            if (Object.keys(stagedMoveSelection.slots).length === 0) stagedMoveSelection = null;
+
+        } else {
+            const wrapperEl = document.querySelector(`.die-wrapper[data-index="${draggedIndex}"][data-source="${dragSource}"]`);
+            newSize = parseInt(wrapperEl ? wrapperEl.dataset.size : 6);
+            newSide = parseInt(wrapperEl ? wrapperEl.dataset.side : 6);
+            newColor = wrapperEl ? wrapperEl.dataset.color : '';
+
+            if (slotReq.sizeReq !== 'any' && parseInt(slotReq.sizeReq) !== newSize) {
+                cleanupDrag(); 
+                const rejectPath = dragSource === 'player' ? `gameState/shards/${localShardId}/dicepool/${draggedIndex}` : `gameState/encounter/dicepool/${draggedIndex}`;
+                update(ref(realtimeDb, rejectPath), { state: 'ready' });
+                return; 
+            }
+            if (slotReq.valReqType !== 'none') {
+                const val = newSide; const req = parseInt(slotReq.valReq);
+                let rejected = false;
+                if (slotReq.valReqType === '>=' && val < req) rejected = true;
+                if (slotReq.valReqType === '<=' && val > req) rejected = true;
+                if (slotReq.valReqType === '=' && val !== req) rejected = true;
+                if (rejected) {
+                    cleanupDrag(); 
+                    const rejectPath = dragSource === 'player' ? `gameState/shards/${localShardId}/dicepool/${draggedIndex}` : `gameState/encounter/dicepool/${draggedIndex}`;
+                    update(ref(realtimeDb, rejectPath), { state: 'ready' });
+                    return;
+                }
+            }
+            newSourcePath = dragSource === 'player' ? `gameState/shards/${localShardId}/dicepool/${draggedIndex}` : `gameState/encounter/dicepool/${draggedIndex}`;
+        }
+
+        // Multi-slot reset safeguard: If slotted into another move entirely, return previous move's dice back to pool
+        if (stagedMoveSelection && stagedMoveSelection.moveId !== moveId) {
+            Object.values(stagedMoveSelection.slots).forEach(d => {
+                 update(ref(realtimeDb, d.sourcePath), { state: 'ready' });
+            });
+            stagedMoveSelection = null;
+        }
+
+        if (!stagedMoveSelection) { stagedMoveSelection = { moveId, moveData, slots: {} }; }
+        if (stagedMoveSelection.slots[slotIndex]) {
+            update(ref(realtimeDb, stagedMoveSelection.slots[slotIndex].sourcePath), { state: 'ready' });
+        }
+        
+        update(ref(realtimeDb, newSourcePath), { state: 'used' });
+        stagedMoveSelection.slots[slotIndex] = { sourcePath: newSourcePath, size: newSize, side: newSide, color: newColor };
+
+        cleanupDrag();
+        renderStagedMoveUI();
+    }
+
+    function cleanupDrag() {
+        isDragging = false; dragSource = null; draggedIndex = null;
+        if (cloneEl) cloneEl.remove(); cloneEl = null;
+        document.removeEventListener('mousemove', dragMove);
+        document.removeEventListener('mouseup', endDrag);
+    }
+
+    document.getElementById('btn-cancel-move').onclick = () => {
+        if (!stagedMoveSelection) return;
+        Object.values(stagedMoveSelection.slots).forEach(d => {
+             update(ref(realtimeDb, d.sourcePath), { state: 'ready' });
+        });
+        stagedMoveSelection = null;
+        renderStagedMoveUI();
+    };
+
+    document.getElementById('btn-primary-move').onclick = async () => {
+        const turnsSnap = await get(ref(realtimeDb, 'gameState/encounter/turnsTaken'));
+        const currentTurns = turnsSnap.val() || 0;
+        const roundSnap = await get(ref(realtimeDb, 'gameState/encounter/round'));
+        const currentRound = roundSnap.val() || 0;
+        const updates = {};
+
+        // If a move has been staged and validated
+        if (stagedMoveSelection && Object.keys(stagedMoveSelection.slots).length >= stagedMoveSelection.moveData.slots.length) {
+            const moveData = stagedMoveSelection.moveData;
+            const localPools = JSON.parse(JSON.stringify(resolutionPools));
+
+            // Award 1 XP if the move has never been used before by this shard
+            const moveId = stagedMoveSelection.moveId;
+            const usedMoves = localShardData.usedMoves || [];
+            if (!usedMoves.includes(moveId)) {
+                const currentXp = localShardData.xp || 0;
+                updates[`gameState/shards/${localShardId}/xp`] = currentXp + 1;
+                updates[`gameState/shards/${localShardId}/usedMoves`] = [...usedMoves, moveId];
+            }
+
+            moveData.outputs.forEach(out => {
+                let targetPoolName = out.targetPool || 'Instant';
+                
+                // Resolve dropdown configurations
+                if (targetPoolName === 'Instant') {
+                    targetPoolName = 'instancePool';
+                } else if (targetPoolName === 'Environment') {
+                    targetPoolName = 'worldPool';
+                } else if (targetPoolName === 'Self') {
+                    targetPoolName = 'karaskPool';
+                } else if (targetPoolName === 'Creature') {
+                    // "Creature" routing auto-determines the remaining pool:
+                    const hasInstance = moveData.outputs.some(o => o.targetPool === 'Instant');
+                    const hasSelf = moveData.outputs.some(o => o.targetPool === 'Self');
+                    if (hasSelf && !hasInstance) {
+                        targetPoolName = 'instancePool';
+                    } else if (hasInstance && !hasSelf) {
+                        targetPoolName = 'karaskPool';
+                    } else {
+                        targetPoolName = 'instancePool';
+                    }
+                }
+
+                const newDieId = Math.random().toString(36).substring(2, 9);
+                if (!localPools[targetPoolName]) localPools[targetPoolName] = {};
+                
+                localPools[targetPoolName][newDieId] = {
+                    size: out.size || 4,
+                    side: out.size || 4, 
+                    tag: (out.tag || '').toUpperCase(),
+                    type: out.type || 'strike',
+                    source: localPlayer || localShardId || 'Player' // Passes identification to source tracking
+                };
+                updates[`gameState/resolutionPools/${targetPoolName}`] = localPools[targetPoolName];
+            });
+            stagedMoveSelection = null;
+            renderStagedMoveUI();
+        }
+
+        updates['gameState/encounter/phase'] = 'submitted';
+        updates['gameState/encounter/round'] = currentRound + 1;
+        updates['gameState/encounter/turnsTaken'] = currentTurns + 1;
+        update(ref(realtimeDb), updates);
+    };
+
+    function rollLoop() {
+        const now = Date.now();
+        const rollingWrappers = document.querySelectorAll('.die-wrapper.state-rolling');
+        rollingWrappers.forEach(wrapper => {
+            const rollTime = parseInt(wrapper.dataset.rollTime || 0);
+            const size = parseInt(wrapper.dataset.size || 6);
+            const actualSide = wrapper.dataset.side;
+            const index = wrapper.dataset.index;
+            const sourceType = wrapper.dataset.source;
+            const textEl = wrapper.querySelector('.die-text');
+            if (!textEl) return;
+
+            if (now < rollTime) {
+                textEl.innerText = Math.floor(Math.random() * size) + 1;
+            } else {
+                textEl.innerText = actualSide;
+                const path = sourceType === 'player' ? `gameState/shards/${localShardId}/dicepool/${index}` : `gameState/encounter/dicepool/${index}`;
+                update(ref(realtimeDb, path), { state: 'ready' });
+            }
+        });
+
+        const resRollingTexts = document.querySelectorAll('.res-rolling-text');
+        resRollingTexts.forEach(textEl => {
+            if (isResolving && (now - resolutionStartTime < 600)) {
+                const size = parseInt(textEl.dataset.size || 6);
+                textEl.innerText = Math.floor(Math.random() * size) + 1;
+            } else {
+                textEl.innerText = textEl.dataset.final;
+                textEl.classList.remove('res-rolling-text');
+                const dieVisual = textEl.closest('.die');
+                if (dieVisual) dieVisual.classList.remove('state-rolling');
+            }
+        });
+
+        requestAnimationFrame(rollLoop);
+    }
+    rollLoop();
+    verifyAccess();
+  </script>
+</body>
+</html>

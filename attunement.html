@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attunement Vote</title>
+  
+  <link rel="stylesheet" href="effects.css">
+  <script src="water-physics.js"></script>
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background-color: #000; color: #fff; font-family: 'Arial', sans-serif;
+      min-height: 100vh; overflow: hidden; display: flex; align-items: center;
+      justify-content: center; text-transform: uppercase; 
+    }
+
+    #radial-container {
+      position: relative; width: 80vh; height: 80vh; max-width: 95vw; max-height: 95vw;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* --- DYNAMIC PROMPT ANIMATIONS --- */
+    #center-prompt {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 200px; text-align: center; font-size: 16px; font-weight: bold;
+      color: #aaa; letter-spacing: 2px; pointer-events: none; z-index: 10;
+      transition: all 1s cubic-bezier(0.175, 0.885, 0.32, 1);
+    }
+
+    #radial-container.phase-2 #center-prompt {
+      top: 5%; transform: translate(-50%, 0);
+      width: 100%; max-width: 800px; font-size: 24px; color: #fff;
+    }
+
+    /* --- PHASE 1 SVG FADEOUT --- */
+    svg#radial-svg {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible;
+      transition: opacity 0.8s ease;
+    }
+    #radial-container.phase-2 #radial-svg { opacity: 0; pointer-events: none; }
+
+    /* SVG Internals */
+    .slice-group { cursor: pointer; transform-origin: 250px 250px; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    #radial-svg .slice-group.selected { transform: scale(1.08); }
+    #radial-svg:hover .slice-group.selected:not(:hover) { transform: scale(1); }
+    #radial-svg .slice-group:hover { transform: scale(1.08) !important; }
+    
+    /* CLAIMED SLICE OVERRIDES */
+    .slice-group.claimed {
+      pointer-events: none !important; /* Kills hover scaling, tooltips, and clicks */
+      opacity: 0.25; /* Makes the entire pie slice heavily transparent */
+    }
+    .slice-group.claimed .slice-path {
+      fill: #050505 !important;
+      stroke: #1a1a1a !important;
+    }
+
+    .slice-path { fill: #111; stroke: #444; stroke-width: 2px; transition: fill 0.2s, stroke 0.2s; filter: url(#pixelate-glitch); }
+    .slice-meter { fill: rgba(255, 255, 255, 0.25); pointer-events: none; transition: all 0.3s ease-out; filter: url(#pixelate-glitch); }
+    .slice-group.selected .slice-path { fill: #222; stroke: #fff; stroke-width: 3px; }
+    .slice-group.selected .slice-meter { fill: rgba(255, 255, 255, 0.5); }
+    .slice-icon-group { transition: opacity 0.3s ease; pointer-events: none; }
+    .hover-content { opacity: 0; transition: opacity 0.2s ease; }
+    .slice-group:hover .hover-content { opacity: 1; }
+    .slice-number { fill: #fff; font-size: 28px; font-weight: 900; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+
+
+    /* --- PHASE 2 PODIUMS --- */
+    #podium-container {
+      position: absolute; bottom: 0; left: 0; width: 100%; height: 75%;
+      display: flex; align-items: flex-end; justify-content: center; gap: 40px;
+      opacity: 0; pointer-events: none; transition: opacity 1s ease; z-index: 5;
+    }
+
+    #radial-container.phase-2 #podium-container { opacity: 1; pointer-events: all; }
+
+    .podium {
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+      width: 140px; height: 100%;
+    }
+
+    .podium-bar {
+      width: 100%; background: #111; border: 2px solid #444; border-bottom: none;
+      filter: url(#pixelate-glitch); transition: height 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      min-height: 140px; display: flex; flex-direction: column; align-items: center;
+      padding: 15px 10px; position: relative;
+    }
+
+    .podium.selected .podium-bar { border-color: #fff; background: #222; }
+
+    .podium-votes {
+      font-size: 36px; font-weight: 900; color: #fff; text-shadow: 2px 2px 0 #000;
+      margin-bottom: auto; /* Uses flex to push the button/name to the bottom */
+    }
+
+    .podium-btn {
+      background: #000; color: #fff; border: 1px solid #555; padding: 10px 15px;
+      font-weight: bold; cursor: pointer; text-transform: uppercase; margin-bottom: 10px;
+      transition: all 0.2s; pointer-events: all;
+    }
+
+    .podium-btn:hover { background: #fff; color: #000; }
+    .podium.selected .podium-btn { background: #fff; color: #000; }
+
+    .podium-name { font-size: 14px; font-weight: bold; color: #aaa; letter-spacing: 2px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+
+  </style>
+</head>
+<body>
+
+  <svg width="0" height="0" style="position:absolute; z-index:-1;">
+    <defs>
+      <filter id="pixelate-glitch" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="1.5" numOctaves="1" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+
+  <div class="element-wrapper q-card-wrapper is-visible wiggle">
+    <div id="radial-container" class="surface-box wiggle">
+      
+      <div id="center-prompt" class="wiggle">COLLECTIVELY VOTE FOR YOUR ATTUNEMENT</div>
+      
+      <svg id="radial-svg" viewBox="0 0 500 500"></svg>
+
+      <div id="podium-container"></div>
+
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeStageManager } from './stage-manager.js';
+    import { initializePresence } from './presence.js'; 
+    import { realtimeDb, firestoreDb } from './firebase-config.js';
+    import { ref, onValue, get, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    initializeStageManager();
+    initializePresence();
+
+    const svgElement = document.getElementById('radial-svg');
+    const radialContainer = document.getElementById('radial-container');
+    const podiumContainer = document.getElementById('podium-container');
+    const centerPrompt = document.getElementById('center-prompt');
+
+    let localPlayer = null;
+
+    // Phase 1 Data
+    let planesList = []; let planesData = {};
+    let votesData = {}; let biasData = {}; let shardsData = {};
+    let shardMappingData = {}; let currentDeviceMapping = {};
+    let currentFanProgress = 0; let hasTriggeredFan = false; let isAnimating = false;
+
+    // Phase 2 State
+    let currentPhase = 1;
+    let candidates = [];
+    let candidateVotesData = {};
+    let phase2Target = null;
+    let resolutionTarget = null;
+
+    async function verifyAccess() {
+      const localDeviceId = sessionStorage.getItem('deviceId');
+      if (!localDeviceId) { window.location.href = 'index.html'; return; }
+
+      try {
+        const mappingSnap = await get(ref(realtimeDb, 'players/deviceMapping'));
+        const mapping = mappingSnap.val() || {};
+        for (const [playerName, mappedId] of Object.entries(mapping)) {
+          if (mappedId === localDeviceId) { localPlayer = playerName; break; }
+        }
+        if (!localPlayer) { window.location.href = 'index.html'; return; }
+        igniteAttunement();
+      } catch (error) { console.error("Gatekeeper error: ", error); }
+    }
+
+    function igniteAttunement() {
+      onSnapshot(collection(firestoreDb, "planes"), (snapshot) => {
+        let unsortedPlanes = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id, order: data.config ? (data.config.order || 0) : 0,
+            image: data.config && data.config.image ? data.config.image : 'placeholder.png'
+          };
+        });
+        unsortedPlanes.sort((a, b) => a.order - b.order);
+        planesList = unsortedPlanes.map(p => p.id);
+        planesData = {}; unsortedPlanes.forEach(p => planesData[p.id] = p);
+        triggerRender();
+      });
+
+      onValue(ref(realtimeDb, 'gameState/attunement/votes'), (snap) => { votesData = snap.val() || {}; triggerRender(); });
+      onValue(ref(realtimeDb, 'gameState/attunement/bias'), (snap) => { biasData = snap.val() || {}; triggerRender(); });
+      onValue(ref(realtimeDb, 'gameState/shards'), (snap) => { shardsData = snap.val() || {}; triggerRender(); });
+      onValue(ref(realtimeDb, 'players/shardMapping'), (snap) => { shardMappingData = snap.val() || {}; triggerRender(); });
+      onValue(ref(realtimeDb, 'players/deviceMapping'), (snap) => { currentDeviceMapping = snap.val() || {}; triggerRender(); });
+
+      onValue(ref(realtimeDb, 'gameState/attunement/phase'), (snap) => { 
+        currentPhase = snap.val() || 1; 
+        if (currentPhase === 2) radialContainer.classList.add('phase-2');
+        else radialContainer.classList.remove('phase-2');
+        triggerRender(); 
+      });
+      onValue(ref(realtimeDb, 'gameState/attunement/candidates'), (snap) => { 
+        const raw = snap.val() || [];
+        candidates = (Array.isArray(raw) ? raw : Object.values(raw)).filter(c => c && c.trim() !== "");
+        triggerRender(); 
+      });
+      onValue(ref(realtimeDb, 'gameState/attunement/candidateVotes'), (snap) => { candidateVotesData = snap.val() || {}; triggerRender(); });
+      onValue(ref(realtimeDb, 'gameState/attunement/phase2Target'), (snap) => { phase2Target = snap.val(); triggerRender(); });
+      onValue(ref(realtimeDb, 'gameState/attunement/resolutionTarget'), (snap) => { resolutionTarget = snap.val(); triggerRender(); });
+
+      setInterval(() => {
+        let promptText = "COLLECTIVELY VOTE FOR YOUR ATTUNEMENT";
+        
+        if (resolutionTarget) {
+          const left = resolutionTarget - Date.now();
+          if (left > 0) promptText = `CONFIRMING ATTUNEMENT IN: ${Math.ceil(left/1000)}`;
+          else promptText = `CONFIRMING...`;
+        } else if (phase2Target) {
+          const left = phase2Target - Date.now();
+          if (left > 0) promptText = `${(left/1000).toFixed(3)}...`;
+          else promptText = `VOTE FOR THE ATTUNED PLAYER`;
+        } else if (currentPhase === 2) {
+          promptText = "VOTE FOR THE ATTUNED PLAYER";
+        }
+        
+        if (centerPrompt.innerText !== promptText) centerPrompt.innerText = promptText;
+      }, 16); 
+    }
+
+    function startFanAnimation() {
+      isAnimating = true;
+      const duration = 1200; 
+      const startTime = performance.now();
+
+      function step(time) {
+        let elapsed = time - startTime;
+        let progress = Math.min(elapsed / duration, 1);
+        currentFanProgress = 1 - Math.pow(1 - progress, 3);
+        
+        triggerRender();
+        if (progress < 1) requestAnimationFrame(step);
+        else isAnimating = false;
+      }
+      requestAnimationFrame(step);
+    }
+
+    function triggerRender() {
+      if (currentPhase === 2) {
+        drawPodiums();
+        return; 
+      }
+
+      if (planesList.length === 0) return;
+      if (!hasTriggeredFan) {
+        hasTriggeredFan = true;
+        startFanAnimation();
+        return; 
+      }
+
+      const planeTotals = {};
+      planesList.forEach(plane => planeTotals[plane] = biasData[plane] || 0);
+
+      Object.entries(votesData).forEach(([playerName, votedPlane]) => {
+        if (planeTotals[votedPlane] !== undefined) {
+          const playerShardId = getShardForPlayer(playerName);
+          let voteWeight = 1;
+          if (playerShardId && shardsData[playerShardId] && shardsData[playerShardId].plane) voteWeight = 3;
+          planeTotals[votedPlane] += voteWeight;
+        }
+      });
+
+      drawRadialMenu(planeTotals);
+    }
+
+    function getShardForPlayer(playerName) {
+      for (const [shardId, mappedPlayer] of Object.entries(shardMappingData)) {
+        if (mappedPlayer === playerName) return shardId;
+      }
+      return null;
+    }
+
+    function drawPodiums() {
+      if (candidates.length === 0) {
+        podiumContainer.innerHTML = '';
+        return;
+      }
+
+      let totalActive = 0;
+      Object.values(currentDeviceMapping).forEach(id => { if(id && id.trim() !== '') totalActive++; });
+      if (totalActive === 0) totalActive = 1;
+
+      const existingPodiums = Array.from(podiumContainer.children);
+      existingPodiums.forEach(p => {
+        if (!candidates.includes(p.dataset.cand)) p.remove();
+      });
+
+      candidates.forEach(cand => {
+        let pod = document.getElementById(`podium-${cand}`);
+        
+        if (!pod) {
+          pod = document.createElement('div');
+          pod.className = 'podium';
+          pod.id = `podium-${cand}`;
+          pod.dataset.cand = cand;
+          
+          const bar = document.createElement('div');
+          bar.className = 'podium-bar wiggle';
+          
+          const votesEl = document.createElement('div');
+          votesEl.className = 'podium-votes';
+          votesEl.innerText = '0';
+          
+          const btn = document.createElement('button');
+          btn.className = 'podium-btn';
+          btn.innerText = 'VOTE';
+          btn.onclick = () => { set(ref(realtimeDb, `gameState/attunement/candidateVotes/${localPlayer}`), cand); };
+          
+          const nameEl = document.createElement('div');
+          nameEl.className = 'podium-name';
+          nameEl.innerText = cand;
+          
+          bar.appendChild(votesEl);
+          bar.appendChild(btn);
+          bar.appendChild(nameEl);
+          pod.appendChild(bar);
+          podiumContainer.appendChild(pod);
+        }
+        
+        let cVotes = 0;
+        Object.values(candidateVotesData).forEach(v => { if (v === cand) cVotes++; });
+        
+        const heightPct = (cVotes / totalActive) * 80; 
+        
+        const bar = pod.querySelector('.podium-bar');
+        bar.style.height = `calc(140px + ${heightPct}%)`; 
+        
+        pod.querySelector('.podium-votes').innerText = cVotes;
+        
+        if (candidateVotesData[localPlayer] === cand) pod.classList.add('selected');
+        else pod.classList.remove('selected');
+      });
+    }
+
+    function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+      const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+      return { x: centerX + (radius * Math.cos(angleInRadians)), y: centerY + (radius * Math.sin(angleInRadians)) };
+    }
+
+    function describeArc(x, y, innerRadius, outerRadius, startAngle, endAngle) {
+      if (endAngle - startAngle >= 360) endAngle = startAngle + 359.99;
+      const startOuter = polarToCartesian(x, y, outerRadius, endAngle);
+      const endOuter = polarToCartesian(x, y, outerRadius, startAngle);
+      const startInner = polarToCartesian(x, y, innerRadius, endAngle);
+      const endInner = polarToCartesian(x, y, innerRadius, startAngle);
+      const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+      return [ "M", startOuter.x, startOuter.y, "A", outerRadius, outerRadius, 0, largeArcFlag, 0, endOuter.x, endOuter.y, "L", endInner.x, endInner.y, "A", innerRadius, innerRadius, 0, largeArcFlag, 1, startInner.x, startInner.y, "Z" ].join(" ");
+    }
+
+    function drawRadialMenu(planeTotals) {
+      svgElement.innerHTML = ''; 
+
+      // 1. Map out which planes are already attuned to any player's shard
+      const claimedPlanes = [];
+      Object.values(shardsData).forEach(shard => {
+        if (shard && shard.plane) claimedPlanes.push(shard.plane);
+      });
+
+      const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+      const radialGrad = document.createElementNS("http://www.w3.org/2000/svg", "radialGradient");
+      radialGrad.setAttribute("id", "feathered-bg");
+      radialGrad.innerHTML = `
+        <stop offset="0%" stop-color="rgba(0,0,0,0.9)" />
+        <stop offset="50%" stop-color="rgba(0,0,0,0.6)" />
+        <stop offset="100%" stop-color="rgba(0,0,0,0)" />
+      `;
+      defs.appendChild(radialGrad);
+      svgElement.appendChild(defs);
+
+      const numSlices = planesList.length;
+      const anglePerSlice = 360 / numSlices;
+      const offset = anglePerSlice / 2; 
+      const cx = 250; const cy = 250;
+      const innerRadius = 60; const outerRadius = 245; 
+      const textRadius = outerRadius - 35; const iconRadius = 22; 
+
+      let highestBias = 0;
+      planesList.forEach(plane => { if ((biasData[plane] || 0) > highestBias) highestBias = biasData[plane]; });
+
+      let totalMaxVotes = 0;
+      Object.entries(currentDeviceMapping).forEach(([playerName, deviceId]) => {
+        if (deviceId && deviceId.trim() !== "") {
+          const playerShardId = getShardForPlayer(playerName);
+          if (playerShardId && shardsData[playerShardId] && shardsData[playerShardId].plane) totalMaxVotes += 3;
+          else totalMaxVotes += 1;
+        }
+      });
+
+      let absoluteMaxScore = highestBias + totalMaxVotes;
+      if (absoluteMaxScore === 0) absoluteMaxScore = 1; 
+
+      planesList.forEach((planeName, index) => {
+        const isClaimed = claimedPlanes.includes(planeName);
+
+        const targetMidAngle = index * anglePerSlice;
+        const animatedMidAngle = targetMidAngle * currentFanProgress;
+        const animatedStartAngle = animatedMidAngle - offset;
+        const animatedEndAngle = animatedStartAngle + anglePerSlice;
+
+        // Force false if it's already claimed to prevent ghost selections
+        const isSelected = !isClaimed && votesData[localPlayer] === planeName;
+        
+        let groupClass = isSelected ? 'slice-group selected wiggle' : 'slice-group wiggle';
+        if (isClaimed) groupClass += ' claimed'; // Inject the dead class
+
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        group.setAttribute("class", groupClass);
+
+        // Prevent voting mechanically as well as visually
+        group.onclick = () => { 
+          if (!isAnimating && !isClaimed) set(ref(realtimeDb, `gameState/attunement/votes/${localPlayer}`), planeName); 
+        };
+
+        const pathData = describeArc(cx, cy, innerRadius, outerRadius, animatedStartAngle, animatedEndAngle);
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", pathData); path.setAttribute("class", "slice-path");
+        group.appendChild(path);
+
+        let currentScore = planeTotals[planeName] || 0;
+        let fillRatio = Math.min(Math.max(currentScore / absoluteMaxScore, 0), 1); 
+        
+        // Don't draw the fill meter if the plane is already claimed
+        if (fillRatio > 0.02 && !isClaimed) { 
+          const meterOuterRadius = innerRadius + ((outerRadius - innerRadius) * fillRatio);
+          const meterPathData = describeArc(cx, cy, innerRadius, meterOuterRadius, animatedStartAngle, animatedEndAngle);
+          const meterPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          meterPath.setAttribute("d", meterPathData); meterPath.setAttribute("class", "slice-meter");
+          group.appendChild(meterPath);
+        }
+
+        const textPos = polarToCartesian(cx, cy, textRadius, animatedMidAngle);
+        
+        const safeId = planeName.replace(/[^a-zA-Z0-9]/g, '-');
+        const clipPath = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+        clipPath.setAttribute("id", `clip-${safeId}`);
+        const clipCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        clipCircle.setAttribute("cx", textPos.x); clipCircle.setAttribute("cy", textPos.y); clipCircle.setAttribute("r", iconRadius); 
+        clipPath.appendChild(clipCircle); defs.appendChild(clipPath);
+
+        const iconGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        iconGroup.setAttribute("class", "slice-icon-group");
+        if (currentFanProgress < 0.95) iconGroup.style.opacity = 0;
+
+        const imgBackdrop = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        imgBackdrop.setAttribute("cx", textPos.x); imgBackdrop.setAttribute("cy", textPos.y); imgBackdrop.setAttribute("r", iconRadius);
+        imgBackdrop.setAttribute("fill", "#111"); imgBackdrop.setAttribute("stroke", "#444"); imgBackdrop.setAttribute("stroke-width", "2");
+
+        const image = document.createElementNS("http://www.w3.org/2000/svg", "image");
+        image.setAttribute("x", textPos.x - iconRadius); image.setAttribute("y", textPos.y - iconRadius);
+        image.setAttribute("width", iconRadius * 2); image.setAttribute("height", iconRadius * 2);
+        image.setAttribute("href", `images/${planesData[planeName].image}`); image.setAttribute("clip-path", `url(#clip-${safeId})`);
+
+        const hoverGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        hoverGroup.setAttribute("class", "hover-content");
+
+        const featherBg = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        featherBg.setAttribute("cx", textPos.x); featherBg.setAttribute("cy", textPos.y); featherBg.setAttribute("r", iconRadius + 8); 
+        featherBg.setAttribute("fill", "url(#feathered-bg)");
+
+        const numText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        numText.setAttribute("x", textPos.x); numText.setAttribute("y", textPos.y); numText.setAttribute("class", "slice-number");
+        numText.textContent = currentScore;
+
+        hoverGroup.appendChild(featherBg); hoverGroup.appendChild(numText);
+        iconGroup.appendChild(imgBackdrop); iconGroup.appendChild(image); iconGroup.appendChild(hoverGroup);
+        group.appendChild(iconGroup); svgElement.appendChild(group);
+      });
+    }
+
+    verifyAccess();
+  </script>
+</body>
+</html>

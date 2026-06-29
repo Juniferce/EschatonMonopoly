@@ -1,0 +1,2856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Narrator Sandbox</title>
+  <link rel="stylesheet" href="effects.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background-color: #050505; color: #fff; font-family: 'Arial', sans-serif; overflow: hidden; text-transform: uppercase; user-select: none; }
+    .wiggle { animation: extremeWiggle 0.4s infinite linear !important; }
+    #physics-sandbox { position: relative; width: 100vw; height: 100vh; }
+    
+    .monopoly-deed { position: absolute; width: 320px; background: rgba(15, 15, 15, 0.95); border: 2px solid #555; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: flex; flex-direction: column; transition: width 0.3s ease; }
+    .monopoly-deed.wide { width: 480px; }
+    .monopoly-deed.xl { width: 550px; }
+    
+    .deed-header { position: relative; background-color: #555; color: #000; font-weight: 900; text-align: center; padding: 10px; font-size: 14px; letter-spacing: 2px; cursor: grab; border-radius: 6px 6px 0 0; }
+    .deed-header:active { cursor: grabbing; }
+    .deed-body { padding: 15px; display: flex; flex-direction: column; gap: 15px; }
+    
+    .pin-btn { position: absolute; top: 8px; right: 8px; cursor: pointer; font-size: 14px; opacity: 0.3; transition: opacity 0.2s; filter: grayscale(1); }
+    .pin-btn:hover { opacity: 0.8; }
+    .pin-btn.pinned { opacity: 1; filter: grayscale(0) drop-shadow(0 0 4px rgba(255, 255, 255, 0.8)); }
+
+    .control-row { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #222; padding-bottom: 10px; }
+    .control-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .control-label { font-size: 11px; font-weight: bold; color: #888; letter-spacing: 1px; min-width: 90px; }
+    .sentence-group { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #ccc; font-weight: bold; flex-wrap: wrap; justify-content: flex-end;}
+    
+    select, button, input[type="number"] { background: #000; color: #fff; border: 1px solid #555; padding: 6px 8px; font-size: 11px; font-weight: bold; text-transform: uppercase; font-family: inherit; outline: none; transition: all 0.2s ease; }
+    select { appearance: none; cursor: pointer; padding-right: 22px; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 4px center; background-size: 14px; }
+    input[type="number"] { width: 45px; text-align: center; appearance: textfield; }
+    input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    
+    button { cursor: pointer; }
+    button.danger { border-color: #8b0000; color: #ff6666; }
+    button.danger:hover { background: #8b0000; color: #fff; }
+    button.action { border-color: #008b00; color: #66ff66; }
+    button.action:hover { background: #008b00; color: #fff; }
+    button.override { border-color: #555; color: #fff; }
+    button.override:hover { background: #fff; color: #000; }
+    
+    .word-bank-area { background: #000; border: 1px solid #333; min-height: 80px; padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; max-height: 250px; overflow-y: auto; }
+    .draft-area { background: #112; border: 1px solid #44a; min-height: 60px; padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
+    .word-chip { background: #222; border: 1px solid #666; color: #fff; padding: 4px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
+    .word-chip:hover { background: #fff; color: #000; }
+    .draft-area .word-chip { background: #44a; border-color: #88f; }
+    .draft-area .word-chip:hover { background: #f44; border-color: #f00; }
+    .category-divider { width: 100%; border-bottom: 1px solid #444; margin: 8px 0 4px 0; color: #888; font-size: 10px; font-weight: bold; }
+
+    .dice-terminal-content { display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow-y: auto; padding-right: 5px; }
+    .dice-palette { display: flex; justify-content: space-between; background: #111; padding: 10px; border: 1px solid #333; border-radius: 6px; margin-bottom: 5px; align-items: center;}
+    .dice-drag-group { display: flex; gap: 10px; }
+    .trash-zone { font-weight: bold; color: #ff6666; font-size: 11px; border: 1px dashed #ff6666; padding: 4px 10px; border-radius: 4px; opacity: 0.5; transition: opacity 0.2s;}
+    .trash-zone.drag-over { opacity: 1; background: rgba(255, 0, 0, 0.2); }
+
+    .player-dice-row { border: 1px solid #333; background: #0a0a0a; padding: 10px; border-radius: 6px; transition: background 0.2s; }
+    .player-dice-row.drag-over { background: rgba(255,255,255,0.05); border-color: #666; }
+    .pdr-pool.drag-over { background: rgba(255,255,255,0.05); border-style: solid; border-color: #666; }
+    .pdr-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; padding-bottom: 8px; margin-bottom: 8px;}
+    .pdr-header span { font-weight: bold; color: #fff; font-size: 14px; letter-spacing: 1px; }
+    .pdr-controls { display: flex; gap: 6px; }
+    .pdr-controls button { padding: 4px 8px; font-size: 10px; }
+    .pdr-pool { display: flex; flex-wrap: wrap; gap: 8px; min-height: 44px; padding: 5px; }
+    .pool-die { 
+      position: relative; 
+      width: 34px; 
+      height: 34px; 
+      font-size: 14px; 
+      font-weight: bold; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      border: none; 
+      background: transparent; 
+      cursor: pointer; 
+      user-select: none; 
+      --border-color: #555;
+      --bg-color: rgba(0, 0, 0, 0.6);
+    }
+    .pool-die:active { cursor: grabbing; }
+
+    .die-svg {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 1; pointer-events: none;
+    }
+    .die-svg path {
+      fill: var(--bg-color, rgba(0, 0, 0, 0.6));
+      stroke: var(--border-color, #fff);
+      stroke-width: 8px;
+    }
+    .die-text { z-index: 2; pointer-events: none; position: relative; }
+
+    .pool-die.selected .die-svg path {
+      stroke: #ffaa00 !important;
+      fill: rgba(255, 170, 0, 0.2) !important;
+    }
+
+    .pool-die.d4 { --border-color: #ff4444; } 
+    .pool-die.d6 { --border-color: #4444ff; } 
+    .pool-die.d8 { --border-color: #44ff44; }
+    .pool-die.d10 { --border-color: #aa44ff; } 
+    .pool-die.d12 { --border-color: #ffff44; } 
+    .pool-die.d20 { --border-color: #ffffff; }
+
+    .pool-die.type-guard { --border-color: #ffff33; --bg-color: rgba(255, 255, 51, 0.2); }
+    .pool-die.type-maneuver { --border-color: #33ccff; --bg-color: rgba(51, 204, 255, 0.2); }
+    .pool-die.type-strike { --border-color: #ff3333; --bg-color: rgba(255, 51, 51, 0.2); }
+
+    .wager-status-box { background: #111; border: 1px solid #444; padding: 10px; border-radius: 6px; font-size: 12px; color: #ccc; }
+    .wager-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #333; }
+
+    .tab-buttons { display: flex; gap: 5px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+    .tab-btn { flex: 1; background: #222; border: 1px solid #444; color: #888; padding: 8px 0; }
+    .tab-btn.active { background: #444; color: #fff; border-color: #666; }
+    .tab-content { padding-top: 10px; }
+
+    .cycle-btn { position: absolute; top: 50%; transform: translateY(-50%); z-index: 10; background: #333; border: 1px solid #666; color: #fff; width: 30px; height: 50px; font-size: 20px; cursor: pointer; }
+    #cycle-dice-left { left: -15px; border-radius: 15px 0 0 15px; }
+    #cycle-dice-right { right: -15px; border-radius: 0 15px 15px 0; }
+
+    .cycle-btn-alt { position: absolute; top: 40%; transform: translateY(-50%); z-index: 10; background: #333; border: 1px solid #666; color: #fff; width: 25px; height: 40px; font-size: 16px; cursor: pointer; }
+    .cycle-btn-alt.left { left: -12px; border-radius: 15px 0 0 15px; }
+    .cycle-btn-alt.right { right: -12px; border-radius: 0 15px 15px 0; }
+
+    .pool-die.state-locked {
+      opacity: 0.35;
+      border-style: dotted;
+    }
+    .no-scrollbar {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .moves-editor-layout { display: flex; gap: 15px; }
+    .moves-col-1 { flex-basis: 150px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+    .moves-col-2 { flex-grow: 1; display: flex; flex-direction: column; gap: 10px; }
+    .moves-list { background: #000; border: 1px solid #333; padding: 5px; min-height: 100px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+    .moves-list-item { background: #1a1a1a; border: 1px solid #444; padding: 6px 8px; font-size: 11px; cursor: pointer; }
+    .moves-list-item:hover { background: #2a2a2a; }
+    .moves-list-item.selected { background: #44a; border-color: #88f; font-weight: bold; }
+    .move-edit-form { display: flex; flex-direction: column; gap: 10px; }
+    .move-edit-form input, .move-edit-form select, .move-edit-form textarea { width: 100%; }
+    .move-edit-form textarea { min-height: 60px; background: #000; color: #fff; border: 1px solid #555; padding: 6px 8px; font-size: 11px; font-family: inherit; resize: vertical; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #111; }
+    ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #666; }
+  </style>
+</head>
+<body ondragover="event.preventDefault()" ondrop="handleGlobalDrop(event)">
+  <svg width="0" height="0" style="position:absolute; z-index:-1;">
+    <defs>
+      <filter id="extreme-1"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="1" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+      <filter id="extreme-2"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="2" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+      <filter id="extreme-3"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="3" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+      <filter id="extreme-4"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="4" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" /></filter>
+    </defs>
+  </svg>
+
+  <div id="physics-sandbox">
+    
+    <div class="monopoly-deed wiggle" id="deck-1" style="left: 30px; top: 30px;">
+      <div class="deed-header">STAGE MANAGER <div class="pin-btn">📌</div></div>
+      <div class="deed-body">
+        <div class="control-row"><div class="control-label">Global Stage</div><div class="sentence-group"><select id="stage-select"></select><button id="btn-set-stage" class="override">PUSH</button></div></div>
+        <div class="control-row"><div class="control-label">Fire Seq.</div><div class="sentence-group">GO TO <select id="cd-target-stage"></select> IN <input type="number" id="cd-seconds" value="10" min="1"> S <button id="btn-cd-toggle" class="action">START</button></div></div>
+      </div>
+    </div>
+
+    <div class="monopoly-deed wide wiggle" id="deck-2" style="left: 380px; top: 30px;">
+      <div class="deed-header" style="background-color: #440066; color: #fff;">ATTUNEMENT TERMINAL <div class="pin-btn">📌</div></div>
+      <div class="deed-body">
+        <div class="control-row"><div class="control-label">PODIUMS</div><div class="sentence-group"><select id="cand-1"></select> <select id="cand-2"></select> <select id="cand-3"></select> IN <input type="number" id="phase2-seconds" value="5" min="1">S <button id="btn-phase2" class="action">GO</button></div></div>
+        <div class="control-row"><div class="control-label">RESOLVE</div><div class="sentence-group">MATH IN <input type="number" id="resolve-seconds" value="10" min="1">S <button id="btn-resolve" class="action">GO</button></div></div>
+      </div>
+    </div>
+
+    <div class="monopoly-deed wiggle" id="deck-5" style="left: 890px; top: 30px; width: 320px;">
+      <div class="deed-header" style="background-color: #ffaa00; color: #000;">WAGER TERMINAL <div class="pin-btn">📌</div></div>
+      <div class="deed-body" style="padding: 12px; gap: 10px;">
+        <div class="wager-status-box" id="wager-list-display" style="max-height: 120px; overflow-y: auto;">WAGER SEQUENCE CLOSED</div>
+        <div class="control-row" style="border: none; padding: 0; justify-content: space-between; gap: 4px;">
+          <button id="btn-wager-open" class="action" style="flex: 1;">CALL</button>
+          <button id="btn-wager-wheel" class="override" style="flex: 1;">LOCK</button>
+          <button id="btn-wager-resolve" class="danger" style="flex: 1;">ROLL</button>
+          <button id="btn-wager-close" class="override" style="flex: 1; border-color: #555; color: #888;">HIDE</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="monopoly-deed wiggle" id="deck-3" style="left: 30px; top: 300px;">
+      <div class="deed-header" style="background-color: #005566; color: #fff;">NARRATION TERMINAL <div class="pin-btn">📌</div></div>
+      <div class="deed-body">
+        <div class="control-label" style="text-align: center; color: #88f;">DRAFT SEQUENCE</div>
+        <div class="draft-area" id="ui-draft-bank"></div>
+        <div class="control-row" style="justify-content: space-between;"><button id="btn-clear-draft" class="override">CLEAR DRAFT</button><button id="btn-clear-live" class="danger">KILL LIVE</button><button id="btn-send-narration" class="action">SEND</button></div>
+        <div class="control-label" style="text-align: center; margin-top: 10px;">AVAILABLE WORDS</div>
+        <div class="word-bank-area" id="ui-word-bank"></div>
+      </div>
+    </div>
+
+    <div class="monopoly-deed xl wiggle collapsed" id="deck-4" style="left: 380px; top: 300px;">
+      <button id="cycle-dice-left" class="cycle-btn" style="display: block;">◀</button>
+      <div class="deed-header" style="background-color: #660000; color: #fff;">DICE TERMINAL <div class="pin-btn">📌</div></div>
+      <div class="dice-palette">
+        <div class="dice-drag-group">
+          <div class="pool-die d4" draggable="true" ondragstart="startDragNewDie(event, 4)">
+            <svg viewBox="0 0 100 100" class="die-svg"><path d="M50,15 L15,85 L85,85 Z" stroke-width="8" stroke-linejoin="round" /></svg>
+            <span class="die-text">4</span>
+          </div>
+          <div class="pool-die d6" draggable="true" ondragstart="startDragNewDie(event, 6)">
+            <svg viewBox="0 0 100 100" class="die-svg"><path d="M15,15 L85,15 L85,85 L15,85 Z" stroke-width="8" stroke-linejoin="round" /></svg>
+            <span class="die-text">6</span>
+          </div>
+          <div class="pool-die d8" draggable="true" ondragstart="startDragNewDie(event, 8)">
+            <svg viewBox="0 0 100 100" class="die-svg"><path d="M50,15 L85,50 L50,85 L15,50 Z" stroke-width="8" stroke-linejoin="round" /></svg>
+            <span class="die-text">8</span>
+          </div>
+          <div class="pool-die d10" draggable="true" ondragstart="startDragNewDie(event, 10)">
+            <svg viewBox="0 0 100 100" class="die-svg"><path d="M50,15 L85,35 L50,85 L15,35 Z" stroke-width="8" stroke-linejoin="round" /></svg>
+            <span class="die-text">10</span>
+          </div>
+          <div class="pool-die d12" draggable="true" ondragstart="startDragNewDie(event, 12)">
+            <svg viewBox="0 0 100 100" class="die-svg"><path d="M50,15 L85,38 L75,85 L25,85 L15,38 Z" stroke-width="8" stroke-linejoin="round" /></svg>
+            <span class="die-text">12</span>
+          </div>
+          <div class="pool-die d20" draggable="true" ondragstart="startDragNewDie(event, 20)">
+            <svg viewBox="0 0 100 100" class="die-svg"><path d="M30,15 L70,15 L85,50 L70,85 L30,85 L15,50 Z" stroke-width="8" stroke-linejoin="round" /></svg>
+            <span class="die-text">20</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="trash-zone" id="dice-trash-zone">TRASH</div>
+          <div class="control-label" style="font-size: 11px; display: flex; align-items: center; gap: 5px; color: #888;">
+              <input type="checkbox" id="randomize-dice-toggle" style="width: 14px; height: 14px; appearance: auto;">
+              RANDOMIZE
+          </div>
+        </div>
+      </div>
+      <div class="deed-body" style="padding-top: 0;"><div class="dice-terminal-content" id="dice-rows-container"></div></div>
+      <button id="cycle-dice-right" class="cycle-btn" style="display: block;">▶</button>
+    </div>
+
+    <div class="monopoly-deed wiggle" id="deck-6" style="left: 960px; top: 300px; width: 720px;">
+        <div class="deed-header" style="background-color: #004400; color: #fff;">ENCOUNTER TERMINAL <div class="pin-btn">📌</div></div>
+        <div class="deed-body" style="padding: 15px; display: flex; gap: 20px;">
+            <!-- Left Column: Encounter Pools & Actions -->
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
+                <div class="control-row" style="flex-direction: column; align-items: flex-start; padding-bottom: 5px;">
+                    <div class="control-label" style="margin-bottom: 5px; display: flex; justify-content: space-between; width: 100%;">
+                        <span>ENCOUNTER POOL</span>
+                        <span id="encounter-round-display">ROUND: 0</span>
+                    </div>
+                    <div class="pdr-pool" id="ui-encounter-pool" style="min-height: 44px; border: 1px dashed #333; width: 100%; border-radius: 4px; padding: 5px;"></div>
+                </div>
+                <div class="control-row" style="flex-direction: column; align-items: flex-start; border: none;">
+                    <div class="control-label" id="ui-encounter-controller-label" style="margin-bottom: 5px;">CONTROLLER POOL (NONE)</div>
+                    <div class="pdr-pool" id="ui-encounter-controller-pool" style="min-height: 44px; border: 1px dashed #333; width: 100%; border-radius: 4px; padding: 5px;"></div>
+                </div>
+                <div class="control-row" style="border: none; padding: 0; justify-content: space-between; gap: 4px;">
+                    <button id="btn-enc-request" class="action" style="flex: 1;">REQUEST</button>
+                    <button id="btn-enc-resolve" class="danger" style="flex: 1;">RESOLVE</button>
+                    <button id="btn-enc-clear" class="override" style="flex: 1;">CLEAR</button>
+                </div>
+            </div>
+            
+            <!-- Right Column: Opposing Creature Controls -->
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 10px; border-left: 1px solid #222; padding-left: 20px;">
+                <div class="control-label" style="color: #ffaa00;">ACTIVE ADVERSARY</div>
+                <select id="encounter-adversary-select" style="width: 100%; margin-bottom: 5px;"><option value="">-- NO ADVERSARY --</option></select>
+                
+                <div id="adversary-hud" style="display: none; flex-direction: column; gap: 8px;">
+                    <div class="wager-status-box" style="padding: 8px; font-size: 11px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>HEALTH: <span id="adv-hud-health" style="color: #ff4444; font-weight: bold;">0/0</span></span>
+                            <span>DURABILITY: <span id="adv-hud-durability" style="color: #ffaa00;">0/0</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="control-label">CREATURE POOL</div>
+                    <div class="pdr-pool" id="ui-creature-pool" style="min-height: 44px; border: 1px dashed #333; border-radius: 4px;"></div>
+                    
+                    <div class="control-label">EXECUTE MOVE</div>
+                    <div id="creature-moves-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;"></div>
+                    <div style="display: flex; gap: 4px;">
+                        <button id="btn-creature-clear" class="override" style="flex: 1;">CLEAR</button>
+                        <button id="btn-creature-confirm" class="action" style="flex: 2;">CONFIRM MOVE</button>
+                    </div>
+                </div>
+                <div id="adversary-hud-empty" style="text-align: center; color: #555; padding-top: 20px; font-size: 11px;">
+                    SELECT A SPAWNED ADVERSARY
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="monopoly-deed wiggle" id="deck-12" style="width: 340px; left: 1300px; top: 30px;">
+        <div class="deed-header" style="background-color: #8b0000; color: #fff;">ADVERSARIES <div class="pin-btn">📌</div></div>
+        <div class="deed-body" style="padding: 15px; gap: 10px;">
+            <div class="tab-buttons">
+                <button class="tab-btn active" id="btn-tab-adv-spawn">SPAWN</button>
+                <button class="tab-btn" id="btn-tab-adv-edit">CREATOR</button>
+            </div>
+            
+            <!-- SPAWNER PANEL -->
+            <div id="panel-adv-spawn" class="tab-content" style="display: flex; flex-direction: column; gap: 10px;">
+                <div class="control-label">CHOOSE STATBLOCK</div>
+                <select id="spawn-statblock-select" style="width: 100%;"></select>
+                <button id="btn-spawn-adversary" class="action" style="width: 100%;">SPAWN INTO ENCOUNTER</button>
+                
+                <div class="control-label" style="margin-top: 10px;">SPAWNED ADVERSARIES</div>
+                <div class="moves-list no-scrollbar" id="spawned-adversaries-list" style="height: 120px; overflow-y: auto;"></div>
+            </div>
+
+            <!-- CREATOR PANEL -->
+            <div id="panel-adv-edit" class="tab-content" style="display: none; flex-direction: column; gap: 8px;">
+                <select id="edit-statblock-select" style="width: 100%;"><option value="">-- NEW STATBLOCK --</option></select>
+                <input type="text" id="adv-edit-name" placeholder="CREATURE NAME">
+                <div class="control-row"><span class="control-label">MAX HEALTH</span><input type="number" id="adv-edit-hp" value="5" min="1"></div>
+                <div class="control-row"><span class="control-label">DURABILITY</span><input type="number" id="adv-edit-dur" value="1" min="1"></div>
+                
+                <div class="control-label">DIFFICULTY DICE</div>
+                <div class="editor-row" style="margin-bottom: 0;">
+                    <select id="adv-new-die-size" style="flex: 2;">
+                        <option value="4">d4</option>
+                        <option value="6">d6</option>
+                        <option value="8">d8</option>
+                        <option value="10">d10</option>
+                        <option value="12">d12</option>
+                        <option value="20">d20</option>
+                    </select>
+                    <button id="btn-adv-add-die" class="override" style="flex: 1;">+ DIE</button>
+                </div>
+                <div class="pdr-pool" id="adv-edit-dice-pool" style="min-height: 40px; border: 1px dashed #444; border-radius: 4px;"></div>
+
+                <div class="control-label">KNOWN MOVES (DRAG MOVE IN)</div>
+                <div class="moves-list no-scrollbar" id="adv-edit-moves-list" style="height: 70px; overflow-y: auto;"></div>
+                
+                <div class="control-label">EXCEPTIONS (TAG MODIFIERS)</div>
+                <div style="display: flex; gap: 4px; margin-bottom: 4px;">
+                    <input type="text" id="adv-edit-exception-key" placeholder="TAG" style="flex: 1.5; text-transform: uppercase;">
+                    <input type="number" id="adv-edit-exception-val" value="0" style="width: 50px;">
+                    <button id="btn-adv-add-exception" class="override" style="flex: 1;">+ ADD</button>
+                </div>
+                <div class="moves-list no-scrollbar" id="adv-edit-exceptions-list" style="height: 70px; overflow-y: auto;"></div>
+
+                <button id="btn-adv-save" class="action" style="width: 100%; margin-top: 5px;">SAVE STATBLOCK</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="monopoly-deed wiggle" id="deck-7" style="left: 1300px; top: 300px; width: 400px;">
+        <div class="deed-header" style="background-color: #333; color: #fff;">MAPPING TERMINAL <div class="pin-btn">📌</div></div>
+        <div class="deed-body">
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-tab="players-shards">Players/Shards</button>
+                <button class="tab-btn" data-tab="shards-planes">Shards/Planes</button>
+                <button class="tab-btn" data-tab="devices-players">Devices/Players</button>
+            </div>
+            <div class="tab-content" id="tab-players-shards">
+                <!-- Content for Players/Shards mapping -->
+            </div>
+            <div class="tab-content" id="tab-shards-planes" style="display: none;">
+                <!-- Content for Shards/Planes mapping -->
+            </div>
+            <div class="tab-content" id="tab-devices-players" style="display: none;">
+                <!-- Content for Devices/Players mapping -->
+            </div>
+        </div>
+    </div>
+
+    <div class="monopoly-deed wide wiggle collapsed" id="deck-8" style="left: 1300px; top: 650px;">
+      <button id="cycle-plane-left" class="cycle-btn-alt left" style="display: block;">◀</button>
+      <div class="deed-header" style="background-color: #444; color: #fff;">PLANES TERMINAL <div class="pin-btn">📌</div></div>
+      <div class="deed-body" id="planes-list-container">
+        <!-- Plane configs will be rendered here -->
+      </div>
+      <button id="cycle-plane-right" class="cycle-btn-alt right" style="display: block;">▶</button>
+    </div>
+
+    <div class="monopoly-deed wiggle" id="deck-9" style="width: 800px; left: 30px; top: 600px;">
+        <div class="deed-header" style="background-color: #222; color: #fff;">MOVE EDITOR TERMINAL <div class="pin-btn">📌</div></div>
+        <div class="deed-body">
+            <div class="moves-editor-layout">
+                <div class="moves-col-1">
+                    <div class="control-label">CATEGORIES</div>
+                    <div class="moves-list" id="moves-category-list"></div>
+                    <div class="control-row" style="border:none; padding: 0; margin-top: 5px;">
+                        <input type="text" id="new-move-category-name" placeholder="New Category..." style="width: 100%;">
+                        <button id="btn-add-move-category" class="action" style="flex-shrink: 0;">ADD</button>
+                    </div>
+                </div>
+                <div class="moves-col-2">
+                    <div class="control-label">MOVES</div>
+                    <div class="moves-list" id="moves-list"></div>
+                    <button id="btn-add-move" class="override" style="margin-top: 5px;">ADD NEW MOVE</button>
+                </div>
+                <div class="moves-col-2">
+                    <div class="control-label">EDIT MOVE</div>
+                    <div class="move-edit-form" id="move-edit-form-container">
+                        <!-- Move Edit Form will be rendered here -->
+                        <div style="text-align: center; color: #666; padding: 20px;">NO MOVE SELECTED</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="monopoly-deed wiggle" id="deck-10" style="width: 500px; left: 850px; top: 650px;">
+        <div class="deed-header" style="background-color: #003366; color: #fff;">SHARD MOVES TERMINAL <div class="pin-btn">📌</div></div>
+        <div class="deed-body" style="padding: 12px; gap: 10px;">
+            <div class="moves-editor-layout" style="display: flex; gap: 15px;">
+                <!-- Left Column: Categories and Category Moves -->
+                <div class="moves-col-2" style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                    <div class="control-row" style="border: none; padding-bottom: 0;">
+                        <select id="shard-moves-category-select" style="width: 100%;"></select>
+                    </div>
+                    <div class="moves-list no-scrollbar" id="shard-moves-category-moves-list" style="height: 180px; overflow-y: auto;"></div>
+                </div>
+                <!-- Right Column: Shards and Mapped Moves + Drag Trash -->
+                <div class="moves-col-2" style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                    <div class="control-row" style="border: none; padding-bottom: 0;">
+                        <select id="shard-moves-shard-select" style="width: 100%;"></select>
+                    </div>
+                    <div class="moves-list no-scrollbar" id="shard-moves-mapped-list" style="height: 134px; overflow-y: auto;"></div>
+                    <div id="shard-moves-delete-zone" style="border: 1px dashed #ff4444; color: #ff4444; background: rgba(255, 68, 68, 0.05); text-align: center; padding: 10px; font-size: 11px; font-weight: bold; border-radius: 4px; transition: all 0.2s;">
+                        DRAG HERE TO REMOVE MOVE
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="monopoly-deed wiggle" id="deck-11" style="width: 500px; left: 850px; top: 960px;">
+        <div class="deed-header" style="background-color: #555500; color: #fff;">ADAPTATION TREE EDITOR <div class="pin-btn">📌</div></div>
+        <div class="deed-body" style="padding: 12px; gap: 10px;">
+            <div class="control-row">
+                <span class="control-label">SELECT TREE</span>
+                <select id="tree-select" style="width: 100%;">
+                    <option value="karask">KARASK (BODY)</option>
+                </select>
+            </div>
+            <div class="moves-editor-layout" style="display: flex; gap: 15px;">
+                <div class="moves-col-1" style="flex: 1;">
+                    <div class="control-label">NODES</div>
+                    <div class="moves-list" id="tree-nodes-list" style="height: 150px; overflow-y: auto;"></div>
+                    <button id="btn-tree-add-node" class="override" style="width:100%; margin-top:5px;">+ NEW NODE</button>
+                </div>
+                <div class="moves-col-2" style="flex: 1.5; display: flex; flex-direction: column; gap: 8px;">
+                    <div class="control-label">EDIT NODE</div>
+                    <div class="move-edit-form" id="tree-node-form" style="display: none;">
+                        <input type="text" id="node-edit-id" placeholder="NODE ID" readonly style="background: #222; color: #888;">
+                        <input type="text" id="node-edit-title" placeholder="TITLE">
+                        <textarea id="node-edit-desc" placeholder="DESCRIPTION" style="min-height: 40px;"></textarea>
+                        <div class="control-row" style="border:none; padding:0;">
+                            <span class="control-label">COST</span>
+                            <input type="number" id="node-edit-cost" value="1" min="0" style="width: 50px;">
+                        </div>
+                        <div class="control-row" style="border:none; padding:0;">
+                            <span class="control-label">NODE TYPE</span>
+                            <select id="node-edit-type" style="width: 100%;">
+                                <option value="custom">CUSTOM / TEXT-ONLY</option>
+                                <option value="unlock_move">UNLOCK MOVE</option>
+                                <option value="increase_max_equipped">INCREASE MAX EQUIPPED LIMIT</option>
+                                <option value="unlock_narration_word">UNLOCK NARRATION WORDS</option>
+                                <option value="unlock_karask_move">UNLOCK KARASK MOVE</option>
+                                <option value="redirect_stage">REDIRECT STAGE</option>
+                                <option value="add_expectation">ADD EXPECTATION / EXCEPTION</option>
+                            </select>
+                        </div>
+                        <div class="control-row" style="border:none; padding:0;">
+                            <span class="control-label">COLLECTIVE</span>
+                            <input type="checkbox" id="node-edit-collective" style="width: auto;">
+                        </div>
+                        <div class="control-row" style="border:none; padding:0;">
+                            <span class="control-label">REPEATING</span>
+                            <input type="checkbox" id="node-edit-repeating" style="width: auto;">
+                        </div>
+                        <div class="control-row" id="node-edit-repeat-max-row" style="border:none; padding:0; display: none;">
+                            <span class="control-label">MAX REPEATS</span>
+                            <input type="number" id="node-edit-repeat-max" value="-1" style="width: 50px;">
+                        </div>
+                        <div class="control-row" style="border:none; padding:0;">
+                            <span class="control-label">PARAMETER</span>
+                            <input type="text" id="node-edit-param" placeholder="e.g. move_123, STRIKE:1">
+                        </div>
+                        <div class="control-label">CONNECTIONS</div>
+                        <input type="text" id="node-edit-connections" placeholder="e.g. adapt3, adapt4">
+                        <div style="display: flex; gap: 4px; margin-top: 5px;">
+                            <button id="btn-tree-delete-node" class="danger" style="flex:1;">DELETE</button>
+                            <button id="btn-tree-save-node" class="action" style="flex:1.5;">SAVE NODE</button>
+                        </div>
+                    </div>
+                    <div id="tree-node-form-empty" style="text-align: center; color: #555; padding-top: 30px; font-size: 11px;">
+                        SELECT OR CREATE A NODE
+                    </div>
+                </div>
+            </div>
+            <button id="btn-tree-save-all" class="action" style="width: 100%; margin-top: 10px;">SAVE COMPLETE TREE TO FIRESTORE</button>
+        </div>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { realtimeDb, firestoreDb } from './firebase-config.js';
+    import { ref, update, onValue, get, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { collection, getDocs, onSnapshot, doc, updateDoc, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { VALID_STAGES } from './stage-manager.js';
+
+    function getShapeSVG(size, isDashed = false) {
+        let d = '';
+        switch(parseInt(size) || 6) {
+            case 4: d = 'M50,15 L15,85 L85,85 Z'; break;
+            case 6: d = 'M15,15 L85,15 L85,85 L15,85 Z'; break;
+            case 8: d = 'M50,15 L85,50 L50,85 L15,50 Z'; break;
+            case 10: d = 'M50,15 L85,35 L50,85 L15,35 Z'; break;
+            case 12: d = 'M50,15 L85,38 L75,85 L25,85 L15,38 Z'; break;
+            case 20: d = 'M30,15 L70,15 L85,50 L70,85 L30,85 L15,50 Z'; break;
+            default: d = 'M15,15 L85,15 L85,85 L15,85 Z';
+        }
+        const dash = isDashed ? 'stroke-dasharray="8 8"' : '';
+        return `<svg viewBox="0 0 100 100" class="die-svg"><path d="${d}" stroke-width="8" stroke-linejoin="round" ${dash} /></svg>`;
+    }
+
+    // ==========================================
+    // 1. DRAG & DROP PHYSICS + PINS + GLOBALS
+    // ==========================================
+    let stagedDice = {}; 
+    let currentDeviceMapping = {}; let shardMappingData = {}; let shardsData = {}; let planesConfigMap = {};
+    let activeEncounterController = null; let encounterPoolData = [];
+    let collapsedDiceViewIndex = 0;
+    let collapsedPlaneViewIndex = 0;
+    let collapsedShardViewIndex = 0;
+    let movesData = {}; let selectedMoveCategory = null; let selectedMoveId = null;
+    let stagedCreatureMove = null;
+
+    // Adversary State variables
+    let adversariesList = {};
+    let activeCreatureId = null;
+    let spawnedCreatures = {};
+    let selectedEditStatblockId = null;
+    let editStatblockData = { name: '', maxHealth: 5, durability: 1, dicepool: [], moves: [], exceptions: {} };
+    let previousFocusId = null;
+    let previousTurnsCount = 0;
+        let lastProcessedRound = null;
+
+    const deeds = Array.from(document.querySelectorAll('.monopoly-deed'));
+    const cards = deeds.map((el) => { const rect = el.getBoundingClientRect(); return { el, x: rect.left, y: rect.top, vx: 0, vy: 0, isDragging: false, isPinned: el.classList.contains('pinned'), w: rect.width, h: rect.height }; });
+    let activeCard = null; let offsetX = 0, offsetY = 0;
+
+    document.querySelectorAll('.pin-btn').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const deed = e.target.closest('.monopoly-deed');
+        const card = cards.find(c => c.el === deed);
+        if (card) { card.isPinned = !card.isPinned; e.target.classList.toggle('pinned', card.isPinned); }
+      };
+    });
+
+    document.addEventListener('mousedown', e => {
+      if (e.target.closest('.pin-btn')) return;
+      const header = e.target.closest('.deed-header'); if (!header) return;
+      const deed = header.closest('.monopoly-deed'); activeCard = cards.find(c => c.el === deed);
+      if (activeCard) {
+        if (activeCard.isPinned) { activeCard = null; return; }
+        activeCard.isDragging = true; activeCard.vx = 0; activeCard.vy = 0;
+        const rect = deed.getBoundingClientRect(); offsetX = e.clientX - rect.left; offsetY = e.clientY - rect.top;
+        cards.forEach(c => c.el.style.zIndex = 1); activeCard.el.style.zIndex = 10;
+      }
+    });
+    document.addEventListener('mousemove', e => { if (!activeCard) return; activeCard.x = e.clientX - offsetX; activeCard.y = e.clientY - offsetY; });
+    document.addEventListener('mouseup', () => { if (activeCard) activeCard.isDragging = false; activeCard = null; });
+    
+    function physicsLoop() {
+      const REPULSION = 0.4; const DAMPING = 0.75; const PADDING = 20;
+      cards.forEach(c => { const rect = c.el.getBoundingClientRect(); c.w = rect.width; c.h = rect.height; });
+      for(let i=0; i<cards.length; i++) {
+        for(let j=i+1; j<cards.length; j++) {
+          const c1 = cards[i]; const c2 = cards[j];
+          if (c1.x < c2.x + c2.w + PADDING && c1.x + c1.w > c2.x - PADDING && c1.y < c2.y + c2.h + PADDING && c1.y + c1.h > c2.y - PADDING) {
+            const cx1 = c1.x + c1.w/2; const cy1 = c1.y + c1.h/2; const cx2 = c2.x + c2.w/2; const cy2 = c2.y + c2.h/2;
+            let dx = cx1 - cx2; let dy = cy1 - cy2; if (dx===0 && dy===0) { dx = Math.random(); dy = Math.random(); }
+            const dist = Math.sqrt(dx*dx + dy*dy); const forceX = (dx/dist) * REPULSION; const forceY = (dy/dist) * REPULSION;
+            if (!c1.isDragging && !c1.isPinned) { c1.vx += forceX; c1.vy += forceY; }
+            if (!c2.isDragging && !c2.isPinned) { c2.vx -= forceX; c2.vy -= forceY; }
+          }
+        }
+      }
+      cards.forEach(c => {
+        if (!c.isDragging && !c.isPinned) {
+          c.x += c.vx; c.y += c.vy; c.vx *= DAMPING; c.vy *= DAMPING;
+          if (c.x < 10) { c.x = 10; c.vx *= -1; } if (c.y < 10) { c.y = 10; c.vy *= -1; }
+          if (c.x + c.w > window.innerWidth - 10) { c.x = window.innerWidth - c.w - 10; c.vx *= -1; }
+          if (c.y + c.h > window.innerHeight - 10) { c.y = window.innerHeight - c.h - 10; c.vy *= -1; }
+        } else {
+          c.vx = 0; c.vy = 0;
+        }
+        c.el.style.left = `${c.x}px`; c.el.style.top = `${c.y}px`;
+      });
+      requestAnimationFrame(physicsLoop);
+    }
+    physicsLoop();
+
+    function initializeCollapsibleTerminals() {
+      document.querySelectorAll('.deed-header').forEach(header => {
+        header.addEventListener('dblclick', () => {
+          const deed = header.closest('.monopoly-deed');
+          if (!deed) return;
+
+          if (deed.id === 'deck-4') { // Dice Terminal
+            const isCollapsed = deed.classList.toggle('collapsed');
+            const cycleLeft = document.getElementById('cycle-dice-left');
+            const cycleRight = document.getElementById('cycle-dice-right');
+
+            cycleLeft.style.display = isCollapsed ? 'block' : 'none';
+            cycleRight.style.display = isCollapsed ? 'block' : 'none';
+            
+            renderDiceTerminal();
+          } else if (deed.id === 'deck-8') { // Planes Terminal
+            const isCollapsed = deed.classList.toggle('collapsed');
+            document.getElementById('cycle-plane-left').style.display = isCollapsed ? 'block' : 'none';
+            document.getElementById('cycle-plane-right').style.display = isCollapsed ? 'block' : 'none';
+            renderPlanesTerminal();
+          } else { // Other terminals
+            const body = deed.querySelector('.deed-body');
+            if (body) {
+              body.style.display = body.style.display === 'none' ? '' : 'none';
+            }
+          }
+        });
+      });
+    }
+    initializeCollapsibleTerminals();
+
+    const trashZone = document.getElementById('dice-trash-zone');
+    if (trashZone) {
+        trashZone.ondragover = (e) => { e.preventDefault(); trashZone.classList.add('drag-over'); };
+        trashZone.ondragleave = () => { trashZone.classList.remove('drag-over'); };
+        trashZone.ondrop = (e) => {
+            e.preventDefault();
+            trashZone.classList.remove('drag-over');
+            const sourceType = e.dataTransfer.getData('sourceType');
+            if (sourceType === 'player') {
+                const sourceShard = e.dataTransfer.getData('sourceShard');
+                const sourceIndex = e.dataTransfer.getData('sourceIndex');
+                if (sourceShard && sourceIndex !== "" && stagedDice[sourceShard] && stagedDice[sourceShard].pool[sourceIndex]) {
+                     stagedDice[sourceShard].pool.splice(sourceIndex, 1);
+                     stagedDice[sourceShard].modified = true;
+                     renderDiceTerminal();
+                }
+            } else if (sourceType === 'encounter') {
+                const sourceIndex = e.dataTransfer.getData('sourceIndex');
+                if (sourceIndex !== "" && encounterPoolData[sourceIndex]) {
+                    encounterPoolData.splice(sourceIndex, 1);
+                    update(ref(realtimeDb), { 'gameState/encounter/dicepool': encounterPoolData });
+                }
+            }
+        };
+    }
+
+    const safeAddListener = (id, event, callback) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener(event, callback);
+    };
+
+    safeAddListener('cycle-dice-left', 'click', () => {
+        collapsedDiceViewIndex--;
+        renderDiceTerminal();
+    });
+
+    safeAddListener('cycle-dice-right', 'click', () => {
+        collapsedDiceViewIndex++;
+        renderDiceTerminal();
+    });
+    
+    safeAddListener('cycle-plane-left', 'click', () => {
+        collapsedPlaneViewIndex--;
+        renderPlanesTerminal();
+    });
+
+    safeAddListener('cycle-plane-right', 'click', () => {
+        collapsedPlaneViewIndex++;
+        renderPlanesTerminal();
+    });
+
+    safeAddListener('cycle-shard-left', 'click', () => {
+        collapsedShardViewIndex--;
+        renderShardMovesTerminal();
+    });
+
+    safeAddListener('cycle-shard-right', 'click', () => {
+        collapsedShardViewIndex++;
+        renderShardMovesTerminal();
+    });
+
+    // ==========================================
+    // 2. STAGE MANAGER
+    // ==========================================
+    const stageSelect = document.getElementById('stage-select'); const cdTargetStage = document.getElementById('cd-target-stage');
+    const cdSecondsInput = document.getElementById('cd-seconds'); const btnToggle = document.getElementById('btn-cd-toggle');
+    let stageSwapTimeout = null; let isTimerRunning = false;
+    VALID_STAGES.forEach(stage => { const opt1 = document.createElement('option'); opt1.value = stage.id; opt1.innerText = stage.label; stageSelect.appendChild(opt1); const opt2 = document.createElement('option'); opt2.value = stage.id; opt2.innerText = stage.label; cdTargetStage.appendChild(opt2); });
+    if (VALID_STAGES.find(s => s.id === 'active')) cdTargetStage.value = 'active';
+    onValue(ref(realtimeDb, 'gameState/stage'), (snapshot) => { const currentStage = snapshot.val(); if (currentStage) stageSelect.value = currentStage; });
+    function getStageUpdatePayload(targetStage) { const payload = { 'gameState/stage': targetStage }; if (targetStage === 'attunement') { payload['gameState/attunement/votes'] = null; payload['gameState/attunement/candidateVotes'] = null; payload['gameState/attunement/candidates'] = null; payload['gameState/attunement/phase'] = 1; } return payload; }
+    document.getElementById('btn-set-stage').onclick = () => { update(ref(realtimeDb), getStageUpdatePayload(stageSelect.value)); };
+    btnToggle.onclick = () => { if (!isTimerRunning) { const seconds = parseInt(cdSecondsInput.value, 10); if (isNaN(seconds) || seconds <= 0) return; btnToggle.innerText = 'STOP'; btnToggle.className = 'danger'; isTimerRunning = true; update(ref(realtimeDb), { 'gameState/countdownTarget': Date.now() + (seconds * 1000) }); if (stageSwapTimeout) clearTimeout(stageSwapTimeout); stageSwapTimeout = setTimeout(() => { const payload = getStageUpdatePayload(cdTargetStage.value); payload['gameState/countdownTarget'] = null; update(ref(realtimeDb), payload); btnToggle.innerText = 'START'; btnToggle.className = 'action'; isTimerRunning = false; }, seconds * 1000); } else { if (stageSwapTimeout) clearTimeout(stageSwapTimeout); update(ref(realtimeDb), { 'gameState/countdownTarget': null }); btnToggle.innerText = 'START'; btnToggle.className = 'action'; isTimerRunning = false; } };
+
+    // ==========================================
+    // 3. ATTUNEMENT TERMINAL
+    // ==========================================
+    const cand1 = document.getElementById('cand-1'); const cand2 = document.getElementById('cand-2'); const cand3 = document.getElementById('cand-3');
+    let phase2Timeout = null; let resolveTimeout = null;
+    function updateDropdowns() { const eligiblePlayers = Object.keys(currentDeviceMapping).filter(playerName => { const hasDevice = currentDeviceMapping[playerName] && currentDeviceMapping[playerName].trim() !== ''; if (!hasDevice) return false; const shardId = Object.keys(shardMappingData).find(key => shardMappingData[key] === playerName); const hasAttunedPlane = shardId && shardsData[shardId] && shardsData[shardId].plane; return !hasAttunedPlane; }); eligiblePlayers.sort((a,b) => a.localeCompare(b)); [cand1, cand2, cand3].forEach(dd => { const currVal = dd.value; dd.innerHTML = '<option value="">-- NONE --</option>'; eligiblePlayers.forEach(p => { const opt = document.createElement('option'); opt.value = p; opt.innerText = p; dd.appendChild(opt); }); if (currVal && eligiblePlayers.includes(currVal)) dd.value = currVal; }); }
+    document.getElementById('btn-phase2').onclick = () => { const seconds = parseInt(document.getElementById('phase2-seconds').value, 10) || 5; const targetTime = Date.now() + (seconds * 1000); const activeCandidates = [cand1.value, cand2.value, cand3.value].filter(c => c !== ""); update(ref(realtimeDb), { 'gameState/attunement/candidates': activeCandidates, 'gameState/attunement/phase2Target': targetTime, 'gameState/attunement/candidateVotes': null }); if (phase2Timeout) clearTimeout(phase2Timeout); phase2Timeout = setTimeout(() => { update(ref(realtimeDb), { 'gameState/attunement/phase': 2, 'gameState/attunement/phase2Target': null }); }, seconds * 1000); };
+    document.getElementById('btn-resolve').onclick = () => { const seconds = parseInt(document.getElementById('resolve-seconds').value, 10) || 10; const targetTime = Date.now() + (seconds * 1000); update(ref(realtimeDb), { 'gameState/attunement/resolutionTarget': targetTime }); if (resolveTimeout) clearTimeout(resolveTimeout); resolveTimeout = setTimeout(async () => { try { const snapshot = await getDocs(collection(firestoreDb, "planes")); const planesList = snapshot.docs.map(doc => doc.id); const pSnap = await get(ref(realtimeDb, 'players')); const gSnap = await get(ref(realtimeDb, 'gameState')); const shardMap = pSnap.val()?.shardMapping || {}; const votes = gSnap.val()?.attunement?.votes || {}; const bias = gSnap.val()?.attunement?.bias || {}; const shards = gSnap.val()?.shards || {}; const cVotes = gSnap.val()?.attunement?.candidateVotes || {}; const rawCandidates = gSnap.val()?.attunement?.candidates || []; const candidates = (Array.isArray(rawCandidates) ? rawCandidates : Object.values(rawCandidates)).filter(c => c); const planeTotals = {}; planesList.forEach(p => planeTotals[p] = bias[p] || 0); Object.entries(votes).forEach(([pName, pVote]) => { const sId = Object.keys(shardMap).find(k => shardMap[k] === pName); if(planeTotals[pVote] !== undefined) planeTotals[pVote] += (sId && shards[sId] && shards[sId].plane) ? 3 : 1; }); let winPlane = planesList[0]; let maxS = -1; for(const p of planesList) { if(planeTotals[p] > maxS) { maxS = planeTotals[p]; winPlane = p; } } const candTotals = {}; candidates.forEach(c => candTotals[c] = 0); Object.values(cVotes).forEach(v => { if(candTotals[v] !== undefined) candTotals[v]++; }); let winPlayer = candidates[0]; let maxP = -1; for(const c of candidates) { if(candTotals[c] > maxP) { maxP = candTotals[c]; winPlayer = c; } } const updates = {}; const winShardId = Object.keys(shardMap).find(k => shardMap[k] === winPlayer); if (winShardId) updates[`gameState/shards/${winShardId}/plane`] = winPlane; updates['gameState/stage'] = 'wager'; updates['gameState/attunement/resolutionTarget'] = null; updates['gameState/attunement/phase'] = 1; updates['gameState/attunement/votes'] = null; updates['gameState/attunement/candidateVotes'] = null; await update(ref(realtimeDb), updates); } catch (error) { console.error("Resolution Math Error:", error); } }, seconds * 1000); };
+
+    // ==========================================
+    // 4. WAGER TERMINAL
+    // ==========================================
+    onValue(ref(realtimeDb, 'gameState/wager'), (snap) => {
+      const wagerData = snap.val() || { phase: 'closed' };
+      const display = document.getElementById('wager-list-display');
+      display.innerHTML = '';
+      
+      if (wagerData.phase === 'closed') {
+          display.innerHTML = '<span style="color:#555;">WAGER SEQUENCE CLOSED</span>';
+          return;
+      }
+      
+      const wagers = wagerData.wagers || {};
+      const entries = Object.entries(wagers);
+      if (entries.length === 0) { display.innerHTML = '<span style="color:#888;">NO ACTIVE WAGERS</span>'; return; }
+      
+      entries.forEach(([sId, w]) => {
+         const pName = shardMappingData[sId] || 'UNKNOWN';
+         const item = document.createElement('div');
+         item.className = 'wager-item';
+         item.innerHTML = `<span>${pName}</span> <span style="color:#ffaa00; font-weight:bold;">d${w.size}</span>`;
+         display.appendChild(item);
+      });
+    });
+
+    document.getElementById('btn-wager-open').onclick = () => { update(ref(realtimeDb), { 'gameState/wager': { phase: 'open', wagers: null, rollingUntil: null, winner: null } }); };
+    document.getElementById('btn-wager-wheel').onclick = () => { update(ref(realtimeDb), { 'gameState/wager/phase': 'wheel' }); };
+    
+    // HIDE BUTTON: Resolves unrolled wagers back to the players' trays safely
+    document.getElementById('btn-wager-close').onclick = async () => { 
+        const snap = await get(ref(realtimeDb, 'gameState/wager'));
+        const wagerData = snap.val();
+        
+        if (wagerData && wagerData.phase !== 'resolved' && wagerData.phase !== 'closed' && wagerData.wagers) {
+            const updates = {};
+            for (const [sId, w] of Object.entries(wagerData.wagers)) {
+                if (w.originalIndex !== undefined) {
+                    updates[`gameState/shards/${sId}/dicepool/${w.originalIndex}/state`] = 'ready';
+                }
+            }
+            updates['gameState/wager'] = { phase: 'closed', wagers: null, rollingUntil: null, winner: null };
+            update(ref(realtimeDb), updates);
+        } else {
+            update(ref(realtimeDb), { 'gameState/wager': { phase: 'closed', wagers: null, rollingUntil: null, winner: null } }); 
+        }
+    };
+
+    // ROLL BUTTON: Pushes winning wagers cleanly into the Encounter Pool
+    document.getElementById('btn-wager-resolve').onclick = async () => {
+      const snap = await get(ref(realtimeDb, 'gameState/wager/wagers'));
+      const wagers = snap.val(); if (!wagers) return;
+
+      const targetTime = Date.now() + 3000;
+      let minRoll = 999; let winners = [];
+      
+      // EXPLICIT WIPE: Clear the old encounter pool completely when resolving a new Wager
+      let encounterPool = [];
+
+      for (const [sId, w] of Object.entries(wagers)) {
+          const roll = Math.floor(Math.random() * w.size) + 1;
+          w.side = roll;
+          if (roll < minRoll) { minRoll = roll; winners = [sId]; } 
+          else if (roll === minRoll) { winners.push(sId); }
+          
+          encounterPool.push({
+             id: Math.random().toString(36).substring(2, 9),
+             size: w.size,
+             side: roll,
+             state: 'ready',
+             rollTime: 0,
+             _selected: false
+          });
+      }
+      
+      const winner = winners[Math.floor(Math.random() * winners.length)];
+      update(ref(realtimeDb), { 'gameState/wager/phase': 'rolling', 'gameState/wager/wagers': wagers, 'gameState/wager/rollingUntil': targetTime, 'gameState/wager/winner': winner });
+
+      setTimeout(() => { 
+          update(ref(realtimeDb), { 
+              'gameState/wager/phase': 'resolved', 
+              'gameState/encounter/controller': winner,
+              'gameState/encounter/dicepool': encounterPool
+          }); 
+      }, 3000);
+    };
+
+    // ==========================================
+    // 5. NARRATION TERMINAL
+    // ==========================================
+    const uiWordBank = document.getElementById('ui-word-bank'); const uiDraftBank = document.getElementById('ui-draft-bank');
+    let draftWords = [];
+    onValue(ref(realtimeDb, 'gameState/narrator/words'), (snap) => { renderWordBank(snap.val()); });
+    function renderWordBank(data) { 
+      uiWordBank.innerHTML = ''; if (!data) return;
+      const isArray = Array.isArray(data); const entries = isArray ? [['AVAILABLE', data]] : Object.entries(data);
+      entries.forEach(([category, words]) => {
+        const catDiv = document.createElement('div'); catDiv.className = 'category-divider'; catDiv.innerText = category.toUpperCase(); uiWordBank.appendChild(catDiv);
+        const wordList = Array.isArray(words) ? words : Object.values(words);
+        wordList.forEach(word => { if (!word) return; const chip = document.createElement('div'); chip.className = 'word-chip'; chip.innerText = word; chip.onclick = () => { draftWords.push(word); renderDraftBank(); }; uiWordBank.appendChild(chip); });
+      });
+    }
+    function renderDraftBank() { uiDraftBank.innerHTML = ''; draftWords.forEach((word, index) => { const chip = document.createElement('div'); chip.className = 'word-chip'; chip.innerText = word; chip.onclick = () => { draftWords.splice(index, 1); renderDraftBank(); }; uiDraftBank.appendChild(chip); }); }
+    document.getElementById('btn-clear-draft').onclick = () => { draftWords = []; renderDraftBank(); };
+    document.getElementById('btn-clear-live').onclick = () => { update(ref(realtimeDb), { 'gameState/narrator/narration': [], 'gameState/narrator/narrationTime': Date.now() }); };
+    document.getElementById('btn-send-narration').onclick = () => { if (draftWords.length === 0) return; update(ref(realtimeDb), { 'gameState/narrator/narration': draftWords, 'gameState/narrator/narrationTime': Date.now() }); draftWords = []; renderDraftBank(); };
+    // Also reset the encounter phase when sending new narration
+    document.getElementById('btn-send-narration').addEventListener('click', () => {
+        update(ref(realtimeDb), {
+            'gameState/encounter/phase': 'narration'
+        });
+    });
+
+    // ==========================================
+    // 6. DICE TERMINAL ENGINE
+    // ==========================================
+    function getReducedSize(currentSize) {
+        const size = parseInt(currentSize, 10);
+        if (size === 20) return 12;
+        if (size === 12) return 10;
+        if (size === 10) return 8;
+        if (size === 8) return 6;
+        if (size === 6) return 4;
+        return 0; // indicates removal
+    }
+
+    onSnapshot(collection(firestoreDb, "planes"), (snapshot) => { 
+      planesConfigMap = {};
+      snapshot.forEach(doc => {
+        planesConfigMap[doc.id] = doc.data(); 
+      });
+      renderPlanesTerminal();
+      renderMappingTerminal();
+      populateTreeSelect();
+    });
+
+    // ==========================================
+    // 11. ADAPTATION TREE EDITOR
+    // ==========================================
+    let activeTreeId = 'karask';
+    let loadedTrees = {};
+    let selectedNodeId = null;
+
+    onSnapshot(collection(firestoreDb, "upgrade_trees"), (snapshot) => {
+        loadedTrees = {};
+        snapshot.forEach(doc => {
+            loadedTrees[doc.id] = doc.data();
+        });
+        populateTreeSelect();
+        renderTreeEditor();
+    });
+
+    function populateTreeSelect() {
+        const select = document.getElementById('tree-select');
+        if (!select) return;
+        const currentVal = select.value || activeTreeId;
+        select.innerHTML = '<option value="karask">KARASK (BODY)</option>';
+        Object.keys(planesConfigMap).forEach(planeId => {
+            const opt = document.createElement('option');
+            opt.value = planeId;
+            opt.innerText = planeId.toUpperCase();
+            select.appendChild(opt);
+        });
+        if (select.querySelector(`option[value="${currentVal}"]`)) {
+            select.value = currentVal;
+            activeTreeId = currentVal;
+        }
+    }
+
+    function renderTreeEditor() {
+        const nodesList = document.getElementById('tree-nodes-list');
+        const nodeForm = document.getElementById('tree-node-form');
+        const nodeFormEmpty = document.getElementById('tree-node-form-empty');
+
+        if (!nodesList || !nodeForm || !nodeFormEmpty) return;
+
+        let treeData = loadedTrees[activeTreeId];
+        if (!treeData) {
+            treeData = {
+                color: activeTreeId === 'karask' ? '#888888' : (planesConfigMap[activeTreeId]?.config?.color || '#ffffff'),
+                nodes: {
+                    origin: { title: "Origin", desc: "The core anchor.", cost: 0, type: "custom", param: "", collective: false, repeating: false, repeatMax: -1, connections: [] }
+                }
+            };
+            loadedTrees[activeTreeId] = treeData;
+        }
+
+        nodesList.innerHTML = '';
+        Object.entries(treeData.nodes || {}).forEach(([nId, node]) => {
+            const item = document.createElement('div');
+            item.className = 'moves-list-item';
+            if (nId === selectedNodeId) item.classList.add('selected');
+            item.innerText = `${nId.toUpperCase()}: ${node.title || 'Untitled'}`;
+            item.onclick = () => {
+                selectedNodeId = nId;
+                renderTreeEditor();
+            };
+            nodesList.appendChild(item);
+        });
+
+        if (selectedNodeId && treeData.nodes[selectedNodeId]) {
+            nodeForm.style.display = 'flex';
+            nodeFormEmpty.style.display = 'none';
+
+            const node = treeData.nodes[selectedNodeId];
+            document.getElementById('node-edit-id').value = selectedNodeId;
+            document.getElementById('node-edit-title').value = node.title || '';
+            document.getElementById('node-edit-desc').value = node.desc || '';
+            document.getElementById('node-edit-cost').value = node.cost !== undefined ? node.cost : 1;
+            document.getElementById('node-edit-type').value = node.type || 'custom';
+            document.getElementById('node-edit-param').value = node.param || '';
+            document.getElementById('node-edit-collective').checked = !!node.collective;
+            const isRep = !!node.repeating;
+            document.getElementById('node-edit-repeating').checked = isRep;
+            document.getElementById('node-edit-repeat-max-row').style.display = isRep ? 'flex' : 'none';
+            document.getElementById('node-edit-repeat-max').value = node.repeatMax !== undefined ? node.repeatMax : -1;
+            document.getElementById('node-edit-connections').value = (node.connections || []).join(', ');
+        } else {
+            nodeForm.style.display = 'none';
+            nodeFormEmpty.style.display = 'block';
+        }
+    }
+
+    safeAddListener('node-edit-repeating', 'change', () => {
+        const checked = document.getElementById('node-edit-repeating').checked;
+        document.getElementById('node-edit-repeat-max-row').style.display = checked ? 'flex' : 'none';
+    });
+
+    safeAddListener('tree-select', 'change', () => {
+        activeTreeId = document.getElementById('tree-select').value;
+        selectedNodeId = null;
+        renderTreeEditor();
+    });
+
+    safeAddListener('btn-tree-add-node', 'click', () => {
+        let treeData = loadedTrees[activeTreeId];
+        if (!treeData) return;
+        const newId = prompt("Enter Unique Node ID (e.g. adapt5, abyss3):");
+        if (!newId) return;
+        const cleanId = newId.trim().toLowerCase().replace(/\s+/g, '_');
+        if (!cleanId) return;
+        if (treeData.nodes[cleanId]) {
+            alert("A node with that ID already exists.");
+            return;
+        }
+        treeData.nodes[cleanId] = {
+            title: "New Node",
+            desc: "Description here.",
+            cost: 1,
+            type: "custom",
+            param: "",
+            collective: false,
+            repeating: false,
+            repeatMax: -1,
+            connections: []
+        };
+        selectedNodeId = cleanId;
+        renderTreeEditor();
+    });
+
+    safeAddListener('btn-tree-save-node', 'click', () => {
+        if (!selectedNodeId) return;
+        let treeData = loadedTrees[activeTreeId];
+        if (!treeData || !treeData.nodes[selectedNodeId]) return;
+
+        const title = document.getElementById('node-edit-title').value.trim();
+        const desc = document.getElementById('node-edit-desc').value.trim();
+        const cost = parseInt(document.getElementById('node-edit-cost').value, 10) || 0;
+        const type = document.getElementById('node-edit-type').value;
+        const param = document.getElementById('node-edit-param').value.trim();
+        const collective = document.getElementById('node-edit-collective').checked;
+        const repeating = document.getElementById('node-edit-repeating').checked;
+        const repeatMax = parseInt(document.getElementById('node-edit-repeat-max').value, 10) || -1;
+        const connStr = document.getElementById('node-edit-connections').value;
+        const connections = connStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+        treeData.nodes[selectedNodeId] = { title, desc, cost, type, param, collective, repeating, repeatMax, connections };
+        renderTreeEditor();
+    });
+
+    safeAddListener('btn-tree-delete-node', 'click', () => {
+        if (!selectedNodeId) return;
+        if (selectedNodeId === 'origin') {
+            alert("Cannot delete the origin node.");
+            return;
+        }
+        let treeData = loadedTrees[activeTreeId];
+        if (!treeData || !treeData.nodes[selectedNodeId]) return;
+
+        if (confirm(`Are you sure you want to delete node ${selectedNodeId}?`)) {
+            delete treeData.nodes[selectedNodeId];
+            selectedNodeId = null;
+            renderTreeEditor();
+        }
+    });
+
+    safeAddListener('btn-tree-save-all', 'click', () => {
+        let treeData = loadedTrees[activeTreeId];
+        if (!treeData) return;
+
+        treeData.color = activeTreeId === 'karask' ? '#888888' : (planesConfigMap[activeTreeId]?.config?.color || '#ffffff');
+
+        const treeRef = doc(firestoreDb, "upgrade_trees", activeTreeId);
+        setDoc(treeRef, treeData).then(() => {
+            alert(`Tree for "${activeTreeId.toUpperCase()}" successfully saved to Firestore!`);
+        }).catch(err => {
+            alert("Error saving tree: " + err);
+        });
+    });
+    
+    // Core data triggers (Ensures Attunement and Encounter views auto-update!)
+    onValue(ref(realtimeDb, 'gameState/shards'), snap => { shardsData = snap.val() || {}; Object.entries(shardsData).forEach(([sId, sData]) => { if (!stagedDice[sId] || !stagedDice[sId].modified) { stagedDice[sId] = { modified: false, pool: (sData.dicepool || []).map(d => ({...d, _selected: false})) }; } }); renderDiceTerminal(); updateDropdowns(); renderEncounterTerminal(); renderMappingTerminal(); renderShardMovesTerminal(); });
+    onValue(ref(realtimeDb, 'players/deviceMapping'), (snap) => { currentDeviceMapping = snap.val() || {}; renderDiceTerminal(); updateDropdowns(); renderMappingTerminal(); }); 
+    onValue(ref(realtimeDb, 'players/shardMapping'), (snap) => { shardMappingData = snap.val() || {}; renderDiceTerminal(); updateDropdowns(); renderEncounterTerminal(); renderMappingTerminal(); renderShardMovesTerminal(); });
+
+    window.startDragNewDie = (e, size) => { e.dataTransfer.setData('sourceType', 'new'); e.dataTransfer.setData('newSize', size); };
+    
+    window.handleGlobalDrop = (e) => {
+      if (e.target.closest('.pdr-pool') || e.target.closest('#ui-encounter-pool') || e.target.closest('.trash-zone')) return;
+
+      const sourceType = e.dataTransfer.getData('sourceType');
+
+      if (sourceType === 'player') {
+          const sourceShard = e.dataTransfer.getData('sourceShard');
+          const sourceIndex = e.dataTransfer.getData('sourceIndex');
+          if (sourceShard && sourceIndex !== "" && stagedDice[sourceShard] && stagedDice[sourceShard].pool[sourceIndex]) {
+              stagedDice[sourceShard].pool.splice(sourceIndex, 1);
+              stagedDice[sourceShard].modified = true;
+              renderDiceTerminal();
+          }
+      } else if (sourceType === 'encounter') {
+          const sourceIndex = e.dataTransfer.getData('sourceIndex');
+          if (sourceIndex !== "" && encounterPoolData[sourceIndex]) {
+              encounterPoolData.splice(sourceIndex, 1);
+              update(ref(realtimeDb), { 'gameState/encounter/dicepool': encounterPoolData });
+          }
+      }
+    };
+
+    function renderDiceTerminal() {
+      const container = document.getElementById('dice-rows-container');
+      container.innerHTML = '';
+      const isCollapsed = document.getElementById('deck-4').classList.contains('collapsed');
+      const mappedShards = Object.entries(shardMappingData).filter(([sId, pName]) => pName && pName.trim() !== '');
+
+      if (isCollapsed) {
+          if (mappedShards.length === 0) return;
+          if (collapsedDiceViewIndex >= mappedShards.length) collapsedDiceViewIndex = 0;
+          if (collapsedDiceViewIndex < 0) collapsedDiceViewIndex = mappedShards.length - 1;
+
+          const [sId, pName] = mappedShards[collapsedDiceViewIndex];
+          renderPlayerDiceRow(sId, pName);
+      } else {
+          mappedShards.forEach(([sId, pName]) => {
+              renderPlayerDiceRow(sId, pName);
+          });
+      }
+    }
+
+    function renderPlayerDiceRow(sId, pName) {
+         const container = document.getElementById('dice-rows-container');
+         const sd = stagedDice[sId]; if (!sd) return;
+         const activeDice = sd.pool.filter(d => d.state !== 'used'); const selectedDice = activeDice.filter(d => d._selected); const anySelected = selectedDice.length > 0;
+         const row = document.createElement('div'); row.className = 'player-dice-row';
+         const header = document.createElement('div'); header.className = 'pdr-header'; const nameSpan = document.createElement('span'); nameSpan.innerText = pName;
+         const controls = document.createElement('div'); controls.className = 'pdr-controls';
+
+         const templateBtn = document.createElement('button'); templateBtn.innerText = 'DEFAULT'; templateBtn.className = 'override';
+         const resetBtn = document.createElement('button'); resetBtn.innerText = 'CURRENT'; resetBtn.className = 'override';
+         
+         const allSelectedLocked = anySelected && selectedDice.every(d => d.state === 'locked');
+         const allActiveLocked = activeDice.length > 0 && activeDice.every(d => d.state === 'locked');
+         const lockBtn = document.createElement('button'); lockBtn.innerText = anySelected ? (allSelectedLocked ? 'UNLOCK' : 'LOCK') : (allActiveLocked ? 'UNLOCK ALL' : 'LOCK ALL'); lockBtn.className = 'danger';
+         
+         const rollBtn = document.createElement('button'); rollBtn.innerText = anySelected ? 'ROLL' : 'ROLL ALL'; rollBtn.className = 'action';
+         const updateBtn = document.createElement('button'); updateBtn.innerText = 'UPDATE'; updateBtn.className = 'override';
+         
+         if (!sd.modified) { updateBtn.style.color = '#555'; updateBtn.style.borderColor = '#333'; updateBtn.style.pointerEvents = 'none'; } 
+         else { updateBtn.style.color = '#fff'; updateBtn.style.borderColor = '#fff'; }
+
+         controls.appendChild(templateBtn); controls.appendChild(resetBtn); controls.appendChild(lockBtn); controls.appendChild(rollBtn); controls.appendChild(updateBtn);
+         header.appendChild(nameSpan); header.appendChild(controls);
+
+         const poolDiv = document.createElement('div'); poolDiv.className = 'pdr-pool';
+         poolDiv.ondragover = (e) => { e.preventDefault(); row.classList.add('drag-over'); }; poolDiv.ondragleave = () => { row.classList.remove('drag-over'); };
+         poolDiv.ondrop = (e) => {
+          e.preventDefault();
+          row.classList.remove('drag-over');
+          const sourceType = e.dataTransfer.getData('sourceType');
+          let movedDie;
+
+          if (sourceType === 'new') {
+              const size = parseInt(e.dataTransfer.getData('newSize'), 10);
+              const randomize = document.getElementById('randomize-dice-toggle').checked;
+              const side = randomize ? (Math.floor(Math.random() * size) + 1) : size;
+              movedDie = { id: Math.random().toString(36).substring(2, 9), size, state: 'ready', side, rollTime: 0, _selected: false };
+          } else if (sourceType === 'player') {
+              const sourceShard = e.dataTransfer.getData('sourceShard');
+              const sourceIndex = e.dataTransfer.getData('sourceIndex');
+              if (sourceShard && sourceIndex !== "" && stagedDice[sourceShard] && stagedDice[sourceShard].pool[sourceIndex]) {
+                   if (sourceShard === sId) return; // Don't drop on self
+                   movedDie = stagedDice[sourceShard].pool.splice(sourceIndex, 1)[0];
+                   stagedDice[sourceShard].modified = true;
+              }
+          } else if (sourceType === 'encounter') {
+              const sourceIndex = e.dataTransfer.getData('sourceIndex');
+              if (sourceIndex !== "" && encounterPoolData[sourceIndex]) {
+                  movedDie = encounterPoolData.splice(sourceIndex, 1)[0];
+                  update(ref(realtimeDb), { 'gameState/encounter/dicepool': encounterPoolData });
+              }
+          }
+
+          if (movedDie) {
+              sd.pool.push(movedDie);
+              sd.modified = true;
+          }
+          renderDiceTerminal();
+        renderSpawnedAdversariesList();
+        renderShardMovesTerminal();
+        };
+
+         sd.pool.forEach((die, index) => { if (die.state === 'used') return; const dieEl = document.createElement('div'); dieEl.className = `pool-die d${die.size}`; if (die._selected) dieEl.classList.add('selected'); if (die.state === 'locked') dieEl.style.opacity = '0.4'; dieEl.innerHTML = getShapeSVG(die.size) + `<span class="die-text">${die.side}</span>`; dieEl.draggable = true; dieEl.ondragstart = (e) => { e.dataTransfer.setData('sourceType', 'player'); e.dataTransfer.setData('sourceShard', sId); e.dataTransfer.setData('sourceIndex', index); }; dieEl.onclick = () => { die._selected = !die._selected; renderDiceTerminal(); }; poolDiv.appendChild(dieEl); });
+
+         templateBtn.onclick = () => { const planeId = shardsData[sId]?.plane; const defaultPool = planesConfigMap[planeId] || [4, 6, 8, 10, 12, 20]; sd.pool = defaultPool.map(d => { const size = typeof d === 'object' ? d.size : parseInt(d); return { id: Math.random().toString(36).substring(2, 9), size, state: 'ready', side: size, rollTime: 0, _selected: false }; }); sd.modified = true; renderDiceTerminal(); };
+         resetBtn.onclick = () => { sd.pool = (shardsData[sId]?.dicepool || []).map(d => ({...d, _selected: false})); sd.modified = false; renderDiceTerminal(); };
+         lockBtn.onclick = () => { const toLock = anySelected ? selectedDice : activeDice; const targetState = (anySelected ? allSelectedLocked : allActiveLocked) ? 'ready' : 'locked'; toLock.forEach(d => { d.state = targetState; d._selected = false; }); sd.modified = true; updateBtn.style.pointerEvents = 'auto'; updateBtn.onclick(); };
+         rollBtn.onclick = () => { const targetTime = Date.now() + 2000; const toRoll = anySelected ? selectedDice : activeDice; let rolled = false; toRoll.forEach(d => { if (d.state !== 'locked') { d.state = 'rolling'; d.rollTime = targetTime; d.side = Math.floor(Math.random() * d.size) + 1; d._selected = false; rolled = true; } }); if (rolled) { sd.modified = true; updateBtn.style.pointerEvents = 'auto'; updateBtn.onclick(); } };
+         updateBtn.onclick = () => { if (!sd.modified) return; const cleanPool = sd.pool.map(d => { const { _selected, ...rest } = d; return rest; }); const updates = {}; updates[`gameState/shards/${sId}/dicepool`] = cleanPool; update(ref(realtimeDb), updates); sd.modified = false; renderDiceTerminal(); };
+         row.appendChild(header); row.appendChild(poolDiv); container.appendChild(row);
+    }
+
+    // ==========================================
+    // 7. ENCOUNTER TERMINAL
+    // ==========================================
+    onValue(ref(realtimeDb, 'gameState/encounter'), (snap) => {
+        const data = snap.val() || {};
+        const rawPool = data.dicepool || [];
+        if (Array.isArray(rawPool)) {
+            encounterPoolData = rawPool.filter(Boolean);
+        } else if (rawPool && typeof rawPool === 'object') {
+            encounterPoolData = Object.values(rawPool).filter(Boolean);
+        } else {
+            encounterPoolData = [];
+        }
+        activeEncounterController = data.controller || null;
+        activeCreatureId = data.activeCreatureId || null;
+        spawnedCreatures = data.creatures || {};
+        
+        // Locked Dice trigger / focus change watcher
+        const currentTurns = data.turnsTaken || 0;
+        if (currentTurns !== previousTurnsCount) {
+            previousTurnsCount = currentTurns;
+            // Roll creature locked dice or adjust focus offsets
+            rollCreatureLockedDice();
+            
+            if (previousFocusId && previousFocusId !== activeCreatureId) {
+                reduceOpposingCreatureDie(previousFocusId);
+            }
+            previousFocusId = activeCreatureId;
+        }
+        
+        const requestBtn = document.getElementById('btn-enc-request');
+        if (requestBtn) {
+            if (data.phase === 'requesting') {
+                requestBtn.style.background = '#008b00';
+                requestBtn.style.color = '#000';
+            } else {
+                requestBtn.style.background = '#000';
+                requestBtn.style.color = '#66ff66';
+            }
+        }
+        renderEncounterTerminal();
+        renderSpawnedAdversariesList();
+        renderShardMovesTerminal();
+        renderAdversaryHUD();
+    });
+
+    onValue(ref(realtimeDb, 'gameState/encounter/round'), (snap) => {
+        const round = snap.val() || 0;
+        const display = document.getElementById('encounter-round-display');
+        if (display) display.innerText = `ROUND: ${round}`;
+
+            if (lastProcessedRound !== null && round > lastProcessedRound) {
+                rerollAllActivePools();
+            }
+            lastProcessedRound = round;
+    });
+
+        async function rerollAllActivePools() {
+            const updates = {};
+            
+            Object.keys(shardsData).forEach(shardId => {
+                const pool = shardsData[shardId]?.dicepool;
+                if (pool) {
+                    const updatedPool = pool.map(die => {
+                        if (die && die.state !== 'used') {
+                            return {
+                                ...die,
+                                side: Math.floor(Math.random() * die.size) + 1
+                            };
+                        }
+                        return die;
+                    });
+                    updates[`gameState/shards/${shardId}/dicepool`] = updatedPool;
+                }
+            });
+
+            if (activeCreatureId && spawnedCreatures[activeCreatureId]) {
+                const pool = spawnedCreatures[activeCreatureId].dicepool;
+                if (pool) {
+                    const poolArray = Array.isArray(pool) ? pool : Object.values(pool);
+                    const updatedPool = poolArray.map(die => {
+                        if (die && die.state !== 'used') {
+                            return {
+                                ...die,
+                                side: Math.floor(Math.random() * die.size) + 1
+                            };
+                        }
+                        return die;
+                    });
+                    updates[`gameState/encounter/creatures/${activeCreatureId}/dicepool`] = updatedPool;
+                }
+            }
+
+            if (Object.keys(updates).length > 0) {
+                await update(ref(realtimeDb), updates);
+            }
+        }
+
+    document.getElementById('btn-enc-request').onclick = () => { update(ref(realtimeDb), { 'gameState/encounter/phase': 'requesting' }); };
+    
+    const isOpposition = (source) => {
+        if (!source) return false;
+        if (spawnedCreatures[source]) return true;
+        return Object.values(spawnedCreatures).some(c => c.name === source);
+    };
+
+    document.getElementById('btn-enc-resolve').onclick = async () => {
+        // First, reset turns and rounds taken back to 0
+        update(ref(realtimeDb), { 
+            'gameState/encounter/turnsTaken': 0,
+            'gameState/encounter/round': 0,
+            'gameState/encounter/resolving': true
+        });
+
+        // Fetch fresh resolution pools
+        const poolsSnap = await get(ref(realtimeDb, 'gameState/resolutionPools'));
+        let pools = poolsSnap.val() || {};
+        if (!pools.instancePool) pools.instancePool = {};
+        if (!pools.worldPool) pools.worldPool = {};
+        if (!pools.karaskPool) pools.karaskPool = {};
+
+        // 1. Roll all active dice simultaneously
+        const rollPool = (pool) => {
+            Object.values(pool).forEach(die => {
+                die.side = Math.floor(Math.random() * die.size) + 1;
+            });
+        };
+        rollPool(pools.instancePool);
+        rollPool(pools.worldPool);
+        rollPool(pools.karaskPool);
+
+        // --- APPLY EXCEPTIONS / EXPECTATIONS ---
+        const karaskSnap = await get(ref(realtimeDb, 'gameState/karask/exceptions'));
+        const karaskExceptions = karaskSnap.val() || {};
+
+        let shardExceptions = {};
+        if (activeEncounterController) {
+            const shardSnap = await get(ref(realtimeDb, `gameState/shards/${activeEncounterController}/exceptions`));
+            shardExceptions = shardSnap.val() || {};
+        }
+
+        let enemyExceptions = {};
+        if (activeCreatureId) {
+            const enemySnap = await get(ref(realtimeDb, `gameState/encounter/creatures/${activeCreatureId}/exceptions`));
+            enemyExceptions = enemySnap.val() || {};
+        }
+
+        const playerSideExpectations = {};
+        const mergeExpectations = (expSource) => {
+            if (!expSource) return;
+            Object.entries(expSource).forEach(([tag, val]) => {
+                const upperTag = tag.toUpperCase();
+                playerSideExpectations[upperTag] = (playerSideExpectations[upperTag] || 0) + parseInt(val, 10);
+            });
+        };
+        mergeExpectations(karaskExceptions);
+        mergeExpectations(shardExceptions);
+
+        const enemySideExpectations = {};
+        if (enemyExceptions) {
+            Object.entries(enemyExceptions).forEach(([tag, val]) => {
+                const upperTag = tag.toUpperCase();
+                enemySideExpectations[upperTag] = (enemySideExpectations[upperTag] || 0) + parseInt(val, 10);
+            });
+        }
+
+        const getGrownSize = (size) => {
+            size = parseInt(size, 10);
+            if (size === 4) return 6;
+            if (size === 6) return 8;
+            if (size === 8) return 10;
+            if (size === 10) return 12;
+            if (size === 12) return 20;
+            if (size === 20) return 20;
+            return size;
+        };
+
+        const applyModifier = (die, mod) => {
+            let val = die.side + mod;
+            if (val < 1) {
+                die.size = getGrownSize(die.size);
+                die.side = 1;
+            } else if (val > die.size) {
+                let nextSize = getReducedSize(die.size);
+                if (nextSize <= 0) {
+                    return false; // remove die
+                }
+                die.size = nextSize;
+                die.side = nextSize;
+            } else {
+                die.side = val;
+            }
+            return true; // keep die
+        };
+
+        const applyPlayerSide = (pool) => {
+            if (!pool) return;
+            Object.entries(pool).forEach(([dieId, die]) => {
+                if (isOpposition(die.source)) return;
+                if (die.tag) {
+                    const upperTag = die.tag.toUpperCase();
+                    if (playerSideExpectations[upperTag] !== undefined) {
+                        const mod = playerSideExpectations[upperTag];
+                        const keep = applyModifier(die, mod);
+                        if (!keep) {
+                            delete pool[dieId];
+                        }
+                    }
+                }
+            });
+        };
+
+        const applyEnemySide = (pool) => {
+            if (!pool) return;
+            Object.entries(pool).forEach(([dieId, die]) => {
+                if (die.tag) {
+                    const upperTag = die.tag.toUpperCase();
+                    if (enemySideExpectations[upperTag] !== undefined) {
+                        const mod = enemySideExpectations[upperTag];
+                        const keep = applyModifier(die, mod);
+                        if (!keep) {
+                            delete pool[dieId];
+                        }
+                    }
+                }
+            });
+        };
+
+        applyPlayerSide(pools.instancePool);
+        applyPlayerSide(pools.worldPool);
+
+        applyEnemySide(pools.karaskPool);
+        applyEnemySide(pools.worldPool);
+
+        await update(ref(realtimeDb), { 'gameState/resolutionPools': pools });
+
+        // 0.5s Delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // 2. Clone world/karask pools to instancePool, and reduce/shrink originals
+        Object.entries(pools.worldPool).forEach(([dieId, die]) => {
+            const cloneId = 'clone_' + dieId;
+            pools.instancePool[cloneId] = {
+                ...die,
+                isClone: true,
+                originPool: 'worldPool'
+            };
+            const nextSize = getReducedSize(die.size);
+            if (nextSize > 0) {
+                die.size = nextSize;
+                die.side = nextSize;
+            } else {
+                delete pools.worldPool[dieId];
+            }
+        });
+
+        Object.entries(pools.karaskPool).forEach(([dieId, die]) => {
+            const cloneId = 'clone_' + dieId;
+            pools.instancePool[cloneId] = {
+                ...die,
+                isClone: true,
+                originPool: 'karaskPool'
+            };
+            const nextSize = getReducedSize(die.size);
+            if (nextSize > 0) {
+                die.size = nextSize;
+                die.side = nextSize;
+            } else {
+                delete pools.karaskPool[dieId];
+            }
+        });
+
+        await update(ref(realtimeDb), { 'gameState/resolutionPools': pools });
+
+        // 0.5s Delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // 3. Combat Resolution Sequence (Rock-Paper-Scissors Comparison Loop)
+        let instanceDice = Object.entries(pools.instancePool).map(([id, d]) => ({ id, ...d, resolved: false }));
+        let totalDamage = 0;
+        let opposingDamage = 0;
+
+        const targetOppositions = {
+            'strike': 'guard',
+            'guard': 'maneuver',
+            'maneuver': 'strike'
+        };
+
+        // We process in ascending order of rolled values
+        instanceDice.sort((a, b) => a.side - b.side);
+
+        for (let i = 0; i < instanceDice.length; i++) {
+            const activeDie = instanceDice[i];
+            if (activeDie.resolved) continue;
+
+            activeDie.resolved = true;
+            const optType = targetOppositions[activeDie.type];
+
+            // Look for an opposing, unresolved target die that can cancel it
+            const targetIdx = instanceDice.findIndex(target => {
+                if (target.resolved) return false;
+                if (target.type !== optType) return false;
+                const activeIsOpp = isOpposition(activeDie.source);
+                const targetIsOpp = isOpposition(target.source);
+                if (activeIsOpp === targetIsOpp) return false; // Must oppose opposing faction!
+                return true;
+            });
+
+            if (targetIdx !== -1) {
+                const targetDie = instanceDice[targetIdx];
+                targetDie.resolved = true;
+
+                // Cancelled! Both are degraded by one step and returned to their original pools (or discarded if below d4)
+                if (activeDie.originPool && (activeDie.originPool === 'worldPool' || activeDie.originPool === 'karaskPool')) {
+                    const nextSize = getReducedSize(activeDie.size);
+                    if (nextSize > 0) {
+                        const backId = 'back_' + Math.random().toString(36).substring(2, 9);
+                        pools[activeDie.originPool][backId] = {
+                            size: nextSize,
+                            side: nextSize,
+                            tag: activeDie.tag,
+                            type: activeDie.type,
+                            source: activeDie.source
+                        };
+                    }
+                }
+
+                if (targetDie.originPool && (targetDie.originPool === 'worldPool' || targetDie.originPool === 'karaskPool')) {
+                    const nextSize = getReducedSize(targetDie.size);
+                    if (nextSize > 0) {
+                        const backId = 'back_' + Math.random().toString(36).substring(2, 9);
+                        pools[targetDie.originPool][backId] = {
+                            size: nextSize,
+                            side: nextSize,
+                            tag: targetDie.tag,
+                            type: targetDie.type,
+                            source: targetDie.source
+                        };
+                    }
+                }
+            } else {
+                // No opposition found: resolve effect
+                const isFromCreature = isOpposition(activeDie.source);
+                if (activeDie.type === 'strike') {
+                    if (isFromCreature) {
+                        opposingDamage += 1;
+                    } else {
+                        totalDamage += 1;
+                    }
+                } else {
+                    // Guard/Maneuver returns to its original pool (degraded by one step)
+                    if (activeDie.originPool && (activeDie.originPool === 'worldPool' || activeDie.originPool === 'karaskPool')) {
+                        const nextSize = getReducedSize(activeDie.size);
+                        if (nextSize > 0) {
+                            const backId = 'back_' + Math.random().toString(36).substring(2, 9);
+                            pools[activeDie.originPool][backId] = {
+                                size: nextSize,
+                                side: nextSize,
+                                tag: activeDie.tag,
+                                type: activeDie.type,
+                                source: activeDie.source
+                            };
+                        }
+                    }
+                }
+            }
+
+            // Clean resolved items from pools.instancePool for real-time visual tracking
+            pools.instancePool = {};
+            instanceDice.forEach(d => {
+                if (!d.resolved) {
+                    const { id, resolved, ...cleanData } = d;
+                    pools.instancePool[id] = cleanData;
+                }
+            });
+            await update(ref(realtimeDb), { 'gameState/resolutionPools': pools });
+            await new Promise(resolve => setTimeout(resolve, 400));
+        }
+
+        console.log(`Resolution done! Damage to Opposition: ${totalDamage}, Damage to Players: ${opposingDamage}`);
+        
+        let xpGained = 0;
+
+        // Apply Damage to the active Opposing Creature health block
+        if (activeCreatureId && spawnedCreatures[activeCreatureId]) {
+            const creature = spawnedCreatures[activeCreatureId];
+            const startingHealth = creature.currentHealth || 0;
+            const maxHealth = creature.maxHealth || 5;
+            let tally = (creature.currentDamageTally || 0) + totalDamage;
+            let health = startingHealth;
+            const dur = creature.durability || 1;
+            
+            while (tally >= dur && health > 0) {
+                health -= 1;
+                tally -= dur;
+            }
+            
+            if (startingHealth > 0 && health === 0) {
+                // Enemy killed!
+                xpGained += 1;
+                if (startingHealth === maxHealth) {
+                    // Killed in a single resolution!
+                    xpGained += 1;
+                }
+            }
+
+            const creatureRef = ref(realtimeDb, `gameState/encounter/creatures/${activeCreatureId}`);
+            update(creatureRef, { currentHealth: health, currentDamageTally: tally });
+        }
+
+        if (activeEncounterController) {
+            if (opposingDamage === 0) {
+                // Succeeded in not taking any damage during a resolution
+                xpGained += 1;
+            }
+
+            if (xpGained > 0) {
+                const shardXpSnap = await get(ref(realtimeDb, `gameState/shards/${activeEncounterController}/xp`));
+                const currentXp = shardXpSnap.val() || 0;
+                await update(ref(realtimeDb), {
+                    [`gameState/shards/${activeEncounterController}/xp`]: currentXp + xpGained
+                });
+            }
+        }
+
+            alert(`Combat Resolved! Total Damage to opposition: ${totalDamage}. Total Damage to players: ${opposingDamage}`);
+    };
+
+    document.getElementById('btn-enc-clear').onclick = () => { 
+        update(ref(realtimeDb), { 
+            'gameState/resolutionPools': null, 
+            'gameState/encounter/turnsTaken': 0,
+            'gameState/encounter/phase': 'narration',
+            'gameState/encounter/resolving': false
+        }); 
+    };
+
+    function renderEncounterTerminal() {
+        const encPoolUI = document.getElementById('ui-encounter-pool');
+        const contPoolUI = document.getElementById('ui-encounter-controller-pool');
+        const labelUI = document.getElementById('ui-encounter-controller-label');
+
+        if(encPoolUI) {
+            encPoolUI.innerHTML = '';
+            
+            encPoolUI.ondragover = (e) => { e.preventDefault(); encPoolUI.classList.add('drag-over'); };
+            encPoolUI.ondragleave = () => { encPoolUI.classList.remove('drag-over'); };
+            encPoolUI.ondrop = (e) => {
+                e.preventDefault();
+                encPoolUI.classList.remove('drag-over');
+                const sourceType = e.dataTransfer.getData('sourceType');
+                let movedDie;
+
+                if (sourceType === 'new') {
+                    const size = parseInt(e.dataTransfer.getData('newSize'), 10);
+                    const randomize = document.getElementById('randomize-dice-toggle').checked;
+                    const side = randomize ? (Math.floor(Math.random() * size) + 1) : size;
+                    movedDie = { id: Math.random().toString(36).substring(2, 9), size, state: 'ready', side, rollTime: 0, _selected: false };
+                } else if (sourceType === 'player') {
+                    const sourceShard = e.dataTransfer.getData('sourceShard');
+                    const sourceIndex = e.dataTransfer.getData('sourceIndex');
+                    if (sourceShard && sourceIndex !== "" && stagedDice[sourceShard] && stagedDice[sourceShard].pool[sourceIndex]) {
+                         movedDie = stagedDice[sourceShard].pool.splice(sourceIndex, 1)[0];
+                         stagedDice[sourceShard].modified = true;
+                         renderDiceTerminal();
+                    }
+                } else if (sourceType === 'encounter') {
+                    return; // Don't allow dropping on self
+                }
+
+                if (movedDie) {
+                    encounterPoolData.push(movedDie);
+                    update(ref(realtimeDb), { 'gameState/encounter/dicepool': encounterPoolData });
+                }
+            };
+
+            encounterPoolData.forEach((die, index) => {
+                if (die.state === 'used') return;
+                const dEl = document.createElement('div');
+                dEl.className = `pool-die d${die.size}`;
+                dEl.innerHTML = getShapeSVG(die.size) + `<span class="die-text">${die.side}</span>`;
+                dEl.draggable = true;
+                dEl.ondragstart = (e) => {
+                    e.dataTransfer.setData('sourceType', 'encounter');
+                    e.dataTransfer.setData('sourceIndex', index);
+                };
+                encPoolUI.appendChild(dEl);
+            });
+        }
+
+        if(contPoolUI && labelUI) {
+            contPoolUI.innerHTML = '';
+            if (activeEncounterController) {
+                const pName = shardMappingData[activeEncounterController] || 'UNKNOWN';
+                labelUI.innerText = `CONTROLLER POOL (${pName})`;
+                
+                const pool = shardsData[activeEncounterController]?.dicepool || [];
+                pool.forEach(die => {
+                    if (die.state === 'used') return;
+                    const dEl = document.createElement('div');
+                    dEl.className = `pool-die d${die.size}`;
+                    dEl.innerHTML = getShapeSVG(die.size) + `<span class="die-text">${die.side}</span>`;
+                    contPoolUI.appendChild(dEl);
+                });
+            } else {
+                labelUI.innerText = 'CONTROLLER POOL (NONE)';
+            }
+        }
+    }
+
+    // ==========================================
+    // 12. ADVERSARIES & STATBLOCKS MANAGEMENT
+    // ==========================================
+    onSnapshot(collection(firestoreDb, "statblocks"), (snapshot) => {
+        adversariesList = {};
+        const editSelect = document.getElementById('edit-statblock-select');
+        const spawnSelect = document.getElementById('spawn-statblock-select');
+        
+        if (editSelect && spawnSelect) {
+            editSelect.innerHTML = '<option value="">-- NEW STATBLOCK --</option>';
+            spawnSelect.innerHTML = '';
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const displayName = doc.id.replace(/_/g, ' ');
+                adversariesList[doc.id] = data;
+                
+                const opt1 = document.createElement('option');
+                opt1.value = doc.id;
+                opt1.innerText = displayName.toUpperCase();
+                editSelect.appendChild(opt1);
+                
+                const opt2 = document.createElement('option');
+                opt2.value = doc.id;
+                opt2.innerText = `${displayName.toUpperCase()} (HP:${data.maxHealth || 5})`;
+                spawnSelect.appendChild(opt2);
+            });
+        }
+    });
+
+    // Tab Switching for Adversary Deck
+    safeAddListener('btn-tab-adv-spawn', 'click', () => {
+        document.getElementById('btn-tab-adv-spawn').classList.add('active');
+        document.getElementById('btn-tab-adv-edit').classList.remove('active');
+        document.getElementById('panel-adv-spawn').style.display = 'flex';
+        document.getElementById('panel-adv-edit').style.display = 'none';
+    });
+    safeAddListener('btn-tab-adv-edit', 'click', () => {
+        document.getElementById('btn-tab-adv-spawn').classList.remove('active');
+        document.getElementById('btn-tab-adv-edit').classList.add('active');
+        document.getElementById('panel-adv-spawn').style.display = 'none';
+        document.getElementById('panel-adv-edit').style.display = 'flex';
+        renderAdversaryCreator();
+    });
+
+    function renderAdversaryCreator() {
+        const select = document.getElementById('edit-statblock-select');
+        const nameInput = document.getElementById('adv-edit-name');
+        const hpInput = document.getElementById('adv-edit-hp');
+        const durInput = document.getElementById('adv-edit-dur');
+        const diceContainer = document.getElementById('adv-edit-dice-pool');
+        const movesContainer = document.getElementById('adv-edit-moves-list');
+        
+        if (!select || !nameInput) return;
+        
+        select.onchange = () => {
+            selectedEditStatblockId = select.value;
+            if (selectedEditStatblockId && adversariesList[selectedEditStatblockId]) {
+                const stat = adversariesList[selectedEditStatblockId];
+                editStatblockData = {
+                    name: selectedEditStatblockId.replace(/_/g, ' '),
+                    maxHealth: stat.maxHealth || 5,
+                    durability: stat.durability || 1,
+                    dicepool: stat.dicepool || [],
+                    moves: stat.moves || [],
+                    exceptions: stat.exceptions || {}
+                };
+            } else {
+                editStatblockData = { name: '', maxHealth: 5, durability: 1, dicepool: [], moves: [], exceptions: {} };
+            }
+            renderAdversaryCreator();
+        };
+
+        nameInput.value = editStatblockData.name;
+        nameInput.oninput = () => { editStatblockData.name = nameInput.value; };
+        hpInput.value = editStatblockData.maxHealth;
+        hpInput.oninput = () => { editStatblockData.maxHealth = parseInt(hpInput.value, 10) || 5; };
+        durInput.value = editStatblockData.durability;
+        durInput.oninput = () => { editStatblockData.durability = parseInt(durInput.value, 10) || 1; };
+
+        // Render Statblock Dice
+        diceContainer.innerHTML = '';
+        editStatblockData.dicepool.forEach((die, idx) => {
+            const dEl = document.createElement('div');
+            dEl.className = `pool-die d${die.size}`;
+            dEl.innerHTML = getShapeSVG(die.size) + `<span class="die-text">${die.size}</span>`;
+            dEl.onclick = () => {
+                editStatblockData.dicepool.splice(idx, 1);
+                renderAdversaryCreator();
+            };
+            diceContainer.appendChild(dEl);
+        });
+
+        // Render Statblock Moves List
+        movesContainer.innerHTML = '';
+        editStatblockData.moves.forEach((moveId, idx) => {
+            const move = findMoveById(moveId);
+            const mEl = document.createElement('div');
+            mEl.className = 'moves-list-item';
+            mEl.innerText = move ? move.title : moveId;
+            mEl.onclick = () => {
+                editStatblockData.moves.splice(idx, 1);
+                renderAdversaryCreator();
+            };
+            movesContainer.appendChild(mEl);
+        });
+
+        // Render Statblock Exceptions List
+        const exceptionsContainer = document.getElementById('adv-edit-exceptions-list');
+        if (exceptionsContainer) {
+            exceptionsContainer.innerHTML = '';
+            const exps = editStatblockData.exceptions || {};
+            Object.entries(exps).forEach(([tag, val]) => {
+                const eEl = document.createElement('div');
+                eEl.className = 'moves-list-item';
+                eEl.style.display = 'flex';
+                eEl.style.justifyContent = 'space-between';
+                eEl.innerHTML = `<span>${tag.toUpperCase()}</span> <span style="color:#ffaa00; font-weight:bold;">${val >= 0 ? '+' : ''}${val}</span>`;
+                eEl.onclick = () => {
+                    delete editStatblockData.exceptions[tag];
+                    renderAdversaryCreator();
+                };
+                exceptionsContainer.appendChild(eEl);
+            });
+        }
+
+        // Support Drag & Drop Moves into Statblock Creator
+        movesContainer.ondragover = (e) => e.preventDefault();
+        movesContainer.ondrop = (e) => {
+            e.preventDefault();
+            const moveId = e.dataTransfer.getData('moveId');
+            if (moveId && !editStatblockData.moves.includes(moveId)) {
+                editStatblockData.moves.push(moveId);
+                renderAdversaryCreator();
+            }
+        };
+    }
+
+    safeAddListener('btn-adv-add-die', 'click', () => {
+        const size = parseInt(document.getElementById('adv-new-die-size').value, 10) || 6;
+        editStatblockData.dicepool.push({ size, state: 'ready' });
+        renderAdversaryCreator();
+    });
+
+    safeAddListener('btn-adv-add-exception', 'click', () => {
+        const keyEl = document.getElementById('adv-edit-exception-key');
+        const valEl = document.getElementById('adv-edit-exception-val');
+        if (!keyEl || !valEl) return;
+        const key = keyEl.value.trim().toUpperCase();
+        const val = parseInt(valEl.value, 10);
+        if (!key) { alert("Please specify a valid Exception tag/key."); return; }
+        if (!editStatblockData.exceptions) editStatblockData.exceptions = {};
+        editStatblockData.exceptions[key] = val;
+        keyEl.value = '';
+        valEl.value = '0';
+        renderAdversaryCreator();
+    });
+
+    safeAddListener('btn-adv-save', 'click', () => {
+        const name = editStatblockData.name.trim().toLowerCase().replace(/\s+/g, '_');
+        if (!name) { alert("Please input a valid creature name."); return; }
+        
+        const statRef = doc(firestoreDb, "statblocks", name);
+        setDoc(statRef, {
+            maxHealth: editStatblockData.maxHealth,
+            durability: editStatblockData.durability,
+            dicepool: editStatblockData.dicepool,
+            moves: editStatblockData.moves,
+            exceptions: editStatblockData.exceptions || {}
+        }).then(() => {
+            alert(`Statblock "${name.replace(/_/g, ' ')}" saved!`);
+        });
+    });
+
+    // Spawning Trigger
+    safeAddListener('btn-spawn-adversary', 'click', () => {
+        const select = document.getElementById('spawn-statblock-select');
+        if (!select || !select.value) return;
+        
+        const blockId = select.value;
+        const stat = adversariesList[blockId];
+        if (!stat) return;
+        
+        const spawnedId = blockId + '_' + Math.random().toString(36).substring(2, 6);
+        const spawnedRef = ref(realtimeDb, `gameState/encounter/creatures/${spawnedId}`);
+        
+        const initialDice = (stat.dicepool || []).map(d => ({
+            size: d.size,
+            state: 'ready',
+            side: d.size
+        }));
+
+        const displayName = blockId.replace(/_/g, ' ').toUpperCase();
+        set(spawnedRef, {
+            name: displayName,
+            maxHealth: stat.maxHealth || 5,
+            currentHealth: stat.maxHealth || 5,
+            durability: stat.durability || 1,
+            currentDamageTally: 0,
+            moves: stat.moves || [],
+            dicepool: initialDice
+        });
+    });
+
+    function renderSpawnedAdversariesList() {
+        const list = document.getElementById('spawned-adversaries-list');
+        if (!list) return;
+        list.innerHTML = '';
+        
+        Object.entries(spawnedCreatures).forEach(([uniqId, data]) => {
+            const item = document.createElement('div');
+            item.className = 'moves-list-item';
+            item.style.display = 'flex';
+            item.style.justifyContent = 'space-between';
+            const displayName = (data.name || uniqId).replace(/_/g, ' ');
+            item.innerHTML = `<span>${displayName}</span> <span style="color:#ff4444; font-weight:bold;">HP ${data.currentHealth}/${data.maxHealth}</span>`;
+            
+            item.onclick = () => {
+                if (confirm(`Remove ${data.name} from the active screen?`)) {
+                    set(ref(realtimeDb, `gameState/encounter/creatures/${uniqId}`), null);
+                    if (activeCreatureId === uniqId) {
+                        update(ref(realtimeDb), { 'gameState/encounter/activeCreatureId': null });
+                    }
+                }
+            };
+            list.appendChild(item);
+        });
+
+        // Populate adversary select in Encounter Terminal
+        const encSelect = document.getElementById('encounter-adversary-select');
+        if (encSelect) {
+            encSelect.innerHTML = '<option value="">-- NO ADVERSARY --</option>';
+            Object.entries(spawnedCreatures).forEach(([uniqId, data]) => {
+                const opt = document.createElement('option');
+                opt.value = uniqId;
+                const displayName = (data.name || '').replace(/_/g, ' ');
+                opt.innerText = `${displayName} (${uniqId.substring(uniqId.indexOf('_')+1)})`;
+                encSelect.appendChild(opt);
+            });
+            if (activeCreatureId && spawnedCreatures[activeCreatureId]) {
+                encSelect.value = activeCreatureId;
+            } else {
+                encSelect.value = "";
+            }
+            
+            encSelect.onchange = () => {
+                update(ref(realtimeDb), { 'gameState/encounter/activeCreatureId': encSelect.value || null });
+            };
+        }
+    }
+
+    // Opposing Adversary Focus decay sizing logic
+    function reduceOpposingCreatureDie(creatureId) {
+        const creature = spawnedCreatures[creatureId];
+        if (!creature || !creature.dicepool) return;
+        
+        const pool = Array.isArray(creature.dicepool) 
+            ? creature.dicepool.filter(Boolean) 
+            : Object.values(creature.dicepool).filter(Boolean);
+            
+        const eligibleIdx = [];
+        pool.forEach((d, idx) => { if (d && d.state === 'ready') eligibleIdx.push(idx); });
+        if (eligibleIdx.length === 0) return;
+        
+        const randomIdx = eligibleIdx[Math.floor(Math.random() * eligibleIdx.length)];
+        const die = pool[randomIdx];
+        const nextSize = getReducedSize(die.size);
+        
+        if (nextSize > 0) {
+            die.size = nextSize;
+            die.side = nextSize;
+        } else {
+            pool.splice(randomIdx, 1);
+        }
+        set(ref(realtimeDb, `gameState/encounter/creatures/${creatureId}/dicepool`), pool);
+    }
+
+    // Locked dice roll unlocking & threshold penalty logic
+    async function rollCreatureLockedDice(forceAll = false) {
+        const creaturesSnap = await get(ref(realtimeDb, 'gameState/encounter/creatures'));
+        const creatures = creaturesSnap.val() || {};
+        
+        for (const [cId, data] of Object.entries(creatures)) {
+            const pool = data.dicepool || [];
+            if (pool.length === 0) continue;
+            
+            let allLocked = true;
+            pool.forEach(die => {
+                if (die.state !== 'locked') allLocked = false;
+            });
+            
+            if (allLocked && !forceAll) {
+                // Direct Automatic penalty damage & unlock
+                const nextHp = Math.max(0, (data.currentHealth || 0) - 1);
+                pool.forEach(die => { die.state = 'ready'; });
+                update(ref(realtimeDb, `gameState/encounter/creatures/${cId}`), {
+                    currentHealth: nextHp,
+                    dicepool: pool
+                });
+                continue;
+            }
+
+            // Standard Roll on locked pool items
+            pool.forEach(die => {
+                if (die.state === 'locked') {
+                    const roll = Math.floor(Math.random() * die.size) + 1;
+                    if (roll === die.size) {
+                        die.state = 'ready';
+                    }
+                }
+            });
+            set(ref(realtimeDb, `gameState/encounter/creatures/${cId}/dicepool`), pool);
+        }
+    }
+
+    // ==========================================
+    // 8. MAPPING TERMINAL
+    // ==========================================
+    function initializeMappingTerminal() {
+        const terminal = document.getElementById('deck-7');
+        const tabButtons = terminal.querySelectorAll('.tab-btn');
+        const tabContents = terminal.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                const tabId = button.dataset.tab;
+                tabContents.forEach(content => {
+                    content.style.display = content.id === `tab-${tabId}` ? '' : 'none';
+                });
+            });
+        });
+        renderMappingTerminal();
+    }
+
+    function renderAdversaryHUD() {
+        const hud = document.getElementById('adversary-hud');
+        const hudEmpty = document.getElementById('adversary-hud-empty');
+        if (!hud || !hudEmpty) return;
+
+        if (activeCreatureId && spawnedCreatures[activeCreatureId]) {
+            hud.style.display = 'flex';
+            hudEmpty.style.display = 'none';
+
+            const creature = spawnedCreatures[activeCreatureId];
+            
+            if (stagedCreatureMove && stagedCreatureMove.creatureId !== activeCreatureId) {
+                stagedCreatureMove = null;
+            }
+
+            const healthEl = document.getElementById('adv-hud-health');
+            const durabilityEl = document.getElementById('adv-hud-durability');
+            if (healthEl) healthEl.innerText = `${creature.currentHealth}/${creature.maxHealth}`;
+            if (durabilityEl) durabilityEl.innerText = `${creature.durability}`;
+
+            const poolUI = document.getElementById('ui-creature-pool');
+            if (poolUI) {
+                poolUI.innerHTML = '';
+                const pool = Array.isArray(creature.dicepool) 
+                    ? creature.dicepool.filter(Boolean) 
+                    : Object.values(creature.dicepool || {}).filter(Boolean);
+
+                pool.forEach((die, idx) => {
+                        const isStaged = stagedCreatureMove && Object.values(stagedCreatureMove.slots).some(s => s.index === idx);
+                        if (isStaged) return;
+
+                    const dEl = document.createElement('div');
+                    dEl.className = `pool-die d${die.size}`;
+                    if (die.state === 'locked') dEl.classList.add('state-locked');
+                    dEl.innerHTML = getShapeSVG(die.size) + `<span class="die-text">${die.side}</span>`;
+                        
+                        if (die.state === 'ready') {
+                            dEl.draggable = true;
+                            dEl.ondragstart = (e) => {
+                                e.dataTransfer.setData('sourceType', 'creature-die');
+                                e.dataTransfer.setData('sourceIndex', idx);
+                                e.dataTransfer.setData('dieSize', die.size);
+                                e.dataTransfer.setData('dieSide', die.side);
+                            };
+                        }
+                    poolUI.appendChild(dEl);
+                });
+            }
+
+            const movesContainer = document.getElementById('creature-moves-container');
+            if (movesContainer) {
+                movesContainer.innerHTML = '';
+                const moves = creature.moves || [];
+                moves.forEach(moveId => {
+                    const move = findMoveById(moveId);
+                    if (!move) return;
+
+                    const card = document.createElement('div');
+                    card.className = 'player-dice-row';
+                    card.style.background = '#111';
+                    card.style.border = '1px solid #444';
+                    card.style.padding = '8px';
+                    card.style.borderRadius = '4px';
+
+                    const title = document.createElement('div');
+                    title.className = 'control-label';
+                    title.style.color = '#ffaa00';
+                    title.style.fontSize = '10px';
+                    title.style.marginBottom = '4px';
+                    title.innerText = (move.title || moveId).toUpperCase();
+
+                    const slotsDiv = document.createElement('div');
+                    slotsDiv.className = 'pdr-pool';
+                    slotsDiv.style.minHeight = '36px';
+                    slotsDiv.style.padding = '2px';
+                    slotsDiv.style.gap = '6px';
+
+                    const slots = move.slots || [];
+                    slots.forEach((slot, sIdx) => {
+                        const slotEl = document.createElement('div');
+                        slotEl.className = 'pool-die';
+                        slotEl.style.width = '30px';
+                        slotEl.style.height = '30px';
+                        slotEl.style.border = '1px dashed #555';
+                        slotEl.style.borderRadius = '4px';
+
+                        const isStaged = stagedCreatureMove && stagedCreatureMove.moveId === moveId && stagedCreatureMove.slots[sIdx];
+                        if (isStaged) {
+                            const stagedDie = stagedCreatureMove.slots[sIdx];
+                            slotEl.className = `pool-die d${stagedDie.size}`;
+                            slotEl.style.border = 'none';
+                            slotEl.innerHTML = getShapeSVG(stagedDie.size) + `<span class="die-text">${stagedDie.side}</span>`;
+                            slotEl.onclick = () => {
+                                delete stagedCreatureMove.slots[sIdx];
+                                if (Object.keys(stagedCreatureMove.slots).length === 0) {
+                                    stagedCreatureMove = null;
+                                }
+                                renderAdversaryHUD();
+                            };
+                        } else {
+                            let reqText = slot.sizeReq === 'any' ? '?' : `d${slot.sizeReq}`;
+                            if (slot.valReqType !== 'none') {
+                                reqText += `\n${slot.valReqType}${slot.valReq}`;
+                            }
+                            slotEl.innerHTML = `<span style="font-size: 8px; color: #555; text-align: center; white-space: pre-line;">${reqText}</span>`;
+
+                            slotEl.ondragover = (e) => { e.preventDefault(); slotEl.style.borderColor = '#ffaa00'; };
+                            slotEl.ondragleave = () => { slotEl.style.borderColor = '#555'; };
+                            slotEl.ondrop = (e) => {
+                                e.preventDefault();
+                                slotEl.style.borderColor = '#555';
+                                const sourceType = e.dataTransfer.getData('sourceType');
+                                if (sourceType !== 'creature-die') return;
+
+                                const sourceIndex = parseInt(e.dataTransfer.getData('sourceIndex'), 10);
+                                const dieSize = parseInt(e.dataTransfer.getData('dieSize'), 10);
+                                const dieSide = parseInt(e.dataTransfer.getData('dieSide'), 10);
+
+                                if (slot.sizeReq !== 'any' && parseInt(slot.sizeReq, 10) !== dieSize) {
+                                    alert(`Required d${slot.sizeReq}, got d${dieSize}.`);
+                                    return;
+                                }
+                                if (slot.valReqType !== 'none') {
+                                    const val = dieSide;
+                                    const req = parseInt(slot.valReq, 10);
+                                    let ok = false;
+                                    if (slot.valReqType === '>=') ok = (val >= req);
+                                    else if (slot.valReqType === '<=') ok = (val <= req);
+                                    else if (slot.valReqType === '=') ok = (val === req);
+                                    else if (slot.valReqType === '>') ok = (val > req);
+                                    else if (slot.valReqType === '<') ok = (val < req);
+                                    if (!ok) {
+                                        alert(`Required value ${slot.valReqType}${req}, got ${val}.`);
+                                        return;
+                                    }
+                                }
+
+                                if (stagedCreatureMove && stagedCreatureMove.moveId !== moveId) {
+                                    stagedCreatureMove = null;
+                                }
+
+                                if (!stagedCreatureMove) {
+                                    stagedCreatureMove = { creatureId: activeCreatureId, moveId, slots: {} };
+                                }
+
+                                stagedCreatureMove.slots[sIdx] = { index: sourceIndex, size: dieSize, side: dieSide };
+                                renderAdversaryHUD();
+                            };
+                        }
+                        slotsDiv.appendChild(slotEl);
+                    });
+
+                    card.appendChild(title);
+                    card.appendChild(slotsDiv);
+                    movesContainer.appendChild(card);
+                });
+            }
+        } else {
+            hud.style.display = 'none';
+            hudEmpty.style.display = 'block';
+        }
+    }
+
+    safeAddListener('btn-creature-clear', 'click', async () => {
+        if (stagedCreatureMove && Object.keys(stagedCreatureMove.slots).length > 0) {
+            stagedCreatureMove = null;
+            renderAdversaryHUD();
+        } else {
+            const turnsSnap = await get(ref(realtimeDb, 'gameState/encounter/turnsTaken'));
+            const currentTurns = turnsSnap.val() || 0;
+            const roundSnap = await get(ref(realtimeDb, 'gameState/encounter/round'));
+            const currentRound = roundSnap.val() || 0;
+
+            const updates = {};
+            updates['gameState/encounter/phase'] = 'submitted';
+            updates['gameState/encounter/round'] = currentRound + 1;
+            updates['gameState/encounter/turnsTaken'] = currentTurns + 1;
+            update(ref(realtimeDb), updates);
+        }
+    });
+
+    safeAddListener('btn-creature-confirm', 'click', async () => {
+        if (!activeCreatureId || !spawnedCreatures[activeCreatureId] || !stagedCreatureMove) return;
+
+        const moveId = stagedCreatureMove.moveId;
+        const move = findMoveById(moveId);
+        if (!move) return;
+
+        const requiredSlots = move.slots?.length || 0;
+        const filledSlots = Object.keys(stagedCreatureMove.slots).length;
+        if (filledSlots < requiredSlots) {
+            alert("Please fill all slots of the move before confirming.");
+            return;
+        }
+
+        const creature = spawnedCreatures[activeCreatureId];
+        const pool = Array.isArray(creature.dicepool) 
+            ? [...creature.dicepool.filter(Boolean)] 
+            : Object.values(creature.dicepool || {}).filter(Boolean);
+
+        Object.values(stagedCreatureMove.slots).forEach(slotData => {
+            pool[slotData.index].state = 'locked';
+        });
+
+        const poolsSnap = await get(ref(realtimeDb, 'gameState/resolutionPools'));
+        const localPools = poolsSnap.val() || { instancePool: {}, worldPool: {}, karaskPool: {} };
+
+        (move.outputs || []).forEach(out => {
+            let targetPoolName = out.targetPool || 'instancePool';
+            if (targetPoolName === 'Instant') targetPoolName = 'instancePool';
+            else if (targetPoolName === 'Environment') targetPoolName = 'worldPool';
+            else if (targetPoolName === 'Self') targetPoolName = 'karaskPool';
+            else if (targetPoolName === 'Creature') targetPoolName = 'instancePool';
+
+            const newDieId = 'creature_' + Math.random().toString(36).substring(2, 9);
+            if (!localPools[targetPoolName]) localPools[targetPoolName] = {};
+
+            localPools[targetPoolName][newDieId] = {
+                size: out.size || 4,
+                side: out.size || 4,
+                tag: (out.tag || '').toUpperCase(),
+                type: out.type || 'strike',
+                source: creature.name || activeCreatureId
+            };
+        });
+
+        const turnsSnap = await get(ref(realtimeDb, 'gameState/encounter/turnsTaken'));
+        const currentTurns = turnsSnap.val() || 0;
+        const roundSnap = await get(ref(realtimeDb, 'gameState/encounter/round'));
+        const currentRound = roundSnap.val() || 0;
+
+        const updates = {};
+        updates[`gameState/encounter/creatures/${activeCreatureId}/dicepool`] = pool;
+        updates['gameState/resolutionPools'] = localPools;
+        updates['gameState/encounter/phase'] = 'submitted';
+        updates['gameState/encounter/round'] = currentRound + 1;
+        updates['gameState/encounter/turnsTaken'] = currentTurns + 1;
+
+        stagedCreatureMove = null;
+
+        update(ref(realtimeDb), updates);
+    });
+
+    function renderMappingTerminal() {
+        // Players/Shards
+        const playersShardsContent = document.getElementById('tab-players-shards');
+        playersShardsContent.innerHTML = '';
+        const players = Object.keys(currentDeviceMapping);
+        const shards = Object.keys(shardsData);
+
+        players.forEach(player => {
+            const row = document.createElement('div');
+            row.className = 'control-row';
+            const label = document.createElement('div');
+            label.className = 'control-label';
+            label.innerText = player;
+
+            const select = document.createElement('select');
+            const currentShard = Object.keys(shardMappingData).find(sId => shardMappingData[sId] === player);
+
+            const noneOption = document.createElement('option');
+            noneOption.value = '';
+            noneOption.innerText = '-- NONE --';
+            select.appendChild(noneOption);
+
+            shards.forEach(shardId => {
+                const option = document.createElement('option');
+                option.value = shardId;
+                option.innerText = shardId;
+                if (shardId === currentShard) {
+                    option.selected = true;
+                }
+                // Disable shard if already taken by another player
+                if (shardMappingData[shardId] && shardMappingData[shardId] !== player) {
+                    option.disabled = true;
+                    option.innerText += ` (${shardMappingData[shardId]})`;
+                }
+                select.appendChild(option);
+            });
+
+            select.onchange = () => {
+                const newShardId = select.value;
+                const updates = {};
+
+                // Find and remove this player's current shard mapping, if it exists.
+                const oldPlayerShardKey = Object.keys(shardMappingData).find(key => shardMappingData[key] === player);
+                if (oldPlayerShardKey) {
+                    updates[`players/shardMapping/${oldPlayerShardKey}`] = null;
+                }
+
+                // Set the new mapping.
+                if (newShardId) {
+                    updates[`players/shardMapping/${newShardId}`] = player;
+                }
+                
+                update(ref(realtimeDb), updates);
+            };
+
+            row.appendChild(label);
+            row.appendChild(select);
+            playersShardsContent.appendChild(row);
+        });
+
+        // Shards/Planes
+        const shardsPlanesContent = document.getElementById('tab-shards-planes');
+        shardsPlanesContent.innerHTML = '';
+        const planes = Object.keys(planesConfigMap);
+
+        Object.entries(shardsData).forEach(([shardId, shardData]) => {
+            const row = document.createElement('div');
+            row.className = 'control-row';
+            const label = document.createElement('div');
+            label.className = 'control-label';
+            const mappedPlayer = shardMappingData[shardId];
+            label.innerText = mappedPlayer ? `${shardId} (${mappedPlayer})` : shardId;
+
+            const select = document.createElement('select');
+            const currentPlane = shardData.plane;
+
+            const noneOption = document.createElement('option');
+            noneOption.value = '';
+            noneOption.innerText = '-- NONE --';
+            select.appendChild(noneOption);
+
+            planes.forEach(planeId => {
+                const option = document.createElement('option');
+                option.value = planeId;
+                option.innerText = planeId;
+                if (planeId === currentPlane) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+
+            select.onchange = () => {
+                const newPlane = select.value;
+                const updates = {};
+                updates[`gameState/shards/${shardId}/plane`] = newPlane || null;
+                update(ref(realtimeDb), updates);
+            };
+
+            row.appendChild(label);
+            row.appendChild(select);
+            shardsPlanesContent.appendChild(row);
+        });
+
+        // Devices/Players
+        const devicesPlayersContent = document.getElementById('tab-devices-players');
+        devicesPlayersContent.innerHTML = '';
+         Object.entries(currentDeviceMapping).forEach(([player, deviceId]) => {
+            const row = document.createElement('div');
+            row.className = 'control-row';
+            const label = document.createElement('div');
+            label.className = 'control-label';
+            label.innerText = player;
+            const value = document.createElement('div');
+            value.className = 'sentence-group';
+            value.innerText = deviceId ? deviceId.substring(0, 10) + '...' : 'OFFLINE';
+            row.appendChild(label);
+            row.appendChild(value);
+            devicesPlayersContent.appendChild(row);
+        });
+    }
+
+    // Initial call
+    initializeMappingTerminal();
+
+    function renderPlanesTerminal() {
+      const container = document.getElementById('planes-list-container');
+      container.innerHTML = '';
+      const isCollapsed = document.getElementById('deck-8').classList.contains('collapsed');
+      const planes = Object.entries(planesConfigMap);
+
+      if (isCollapsed) {
+        if (planes.length === 0) return;
+        if (collapsedPlaneViewIndex >= planes.length) collapsedPlaneViewIndex = 0;
+        if (collapsedPlaneViewIndex < 0) collapsedPlaneViewIndex = planes.length - 1;
+        
+        const [planeId, planeData] = planes[collapsedPlaneViewIndex];
+        renderPlaneRow(planeId, planeData);
+
+      } else {
+        planes.forEach(([planeId, planeData]) => {
+          renderPlaneRow(planeId, planeData);
+        });
+      }
+    }
+    
+    function renderPlaneRow(planeId, planeData) {
+      const container = document.getElementById('planes-list-container');
+      const row = document.createElement('div');
+      row.className = 'control-row';
+
+      const label = document.createElement('div');
+      label.className = 'control-label';
+      label.innerText = planeId;
+
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      colorInput.value = planeData.config?.color || '#ffffff';
+      
+      const saveBtn = document.createElement('button');
+      saveBtn.innerText = 'SAVE';
+      saveBtn.className = 'override';
+      saveBtn.onclick = () => {
+        const newColor = colorInput.value;
+        const planeRef = doc(firestoreDb, "planes", planeId);
+        updateDoc(planeRef, { "config.color": newColor })
+          .then(() => {
+            saveBtn.innerText = 'SAVED!';
+            setTimeout(() => { saveBtn.innerText = 'SAVE'; }, 2000);
+          })
+          .catch(err => {
+            saveBtn.innerText = 'ERROR!';
+            console.error("Error updating color: ", err);
+            setTimeout(() => { saveBtn.innerText = 'SAVE'; }, 2000);
+          });
+      };
+
+      const sentenceGroup = document.createElement('div');
+      sentenceGroup.className = 'sentence-group';
+      sentenceGroup.appendChild(colorInput);
+      sentenceGroup.appendChild(saveBtn);
+      
+      row.appendChild(label);
+      row.appendChild(sentenceGroup);
+      container.appendChild(row);
+    }
+
+    // ==========================================
+    // 9. MOVE EDITOR TERMINAL
+    // ==========================================
+    onSnapshot(collection(firestoreDb, "moves"), (snapshot) => {
+      movesData = {};
+      snapshot.forEach(doc => {
+        movesData[doc.id] = doc.data();
+      });
+      renderMovesTerminal();
+      renderShardMovesTerminal();
+    });
+
+    function renderMovesTerminal() {
+      const categoryList = document.getElementById('moves-category-list');
+      const movesList = document.getElementById('moves-list');
+      const formContainer = document.getElementById('move-edit-form-container');
+      categoryList.innerHTML = '';
+      movesList.innerHTML = '';
+      formContainer.innerHTML = '';
+
+      // Render Categories
+      Object.keys(movesData).sort().forEach(catId => {
+        const item = document.createElement('div');
+        item.className = 'moves-list-item';
+        item.innerText = catId;
+        if (catId === selectedMoveCategory) {
+          item.classList.add('selected');
+        }
+        item.onclick = () => {
+          selectedMoveCategory = catId;
+          selectedMoveId = null; // Reset move selection
+          renderMovesTerminal();
+        };
+        categoryList.appendChild(item);
+      });
+
+      // Render Moves in selected category
+      if (selectedMoveCategory) {
+        const moves = movesData[selectedMoveCategory];
+        Object.keys(moves).sort().forEach(moveId => {
+          const move = moves[moveId];
+          const item = document.createElement('div');
+          item.className = 'moves-list-item';
+          item.innerText = move.title || moveId;
+          if (moveId === selectedMoveId) {
+            item.classList.add('selected');
+          }
+          item.onclick = () => {
+            selectedMoveId = moveId;
+            renderMovesTerminal();
+          };
+          movesList.appendChild(item);
+        });
+      }
+
+      // Render form for selected move
+      if (selectedMoveCategory && selectedMoveId) {
+        const move = movesData[selectedMoveCategory][selectedMoveId];
+        if (move) {
+          if (!Array.isArray(move.slots)) move.slots = [];
+          if (!Array.isArray(move.outputs)) move.outputs = [];
+
+          formContainer.innerHTML = `
+            <div class="control-row" style="border:none; padding-bottom:5px;">
+              <input type="text" id="move-edit-title" value="${move.title || ''}" placeholder="Move Title">
+            </div>
+            <textarea id="move-edit-desc" placeholder="Description..." style="margin-bottom: 8px;">${move.description || ''}</textarea>
+            
+            <!-- SLOTS SUBSECTION -->
+            <div class="editor-sub-section">
+              <div class="editor-sub-section-title">
+                <span>INPUT SLOTS REQ</span>
+              </div>
+              <div id="move-edit-slots-list" style="max-height: 100px; overflow-y:auto; margin-bottom: 8px;"></div>
+              <div class="editor-row">
+                <select id="new-slot-size" style="flex:1.5;">
+                  <option value="any">ANY SIZE</option>
+                  <option value="4">d4</option>
+                  <option value="6">d6</option>
+                  <option value="8">d8</option>
+                  <option value="10">d10</option>
+                  <option value="12">d12</option>
+                  <option value="20">d20</option>
+                </select>
+                <select id="new-slot-valtype" style="flex:1.2;">
+                  <option value="none">VAL REQ</option>
+                  <option value=">">&gt;</option>
+                  <option value="<">&lt;</option>
+                  <option value="=">=</option>
+                  <option value=">=">&gt;=</option>
+                  <option value="<=">&lt;=</option>
+                </select>
+                <input type="number" id="new-slot-val" value="0" style="width:35px;">
+                <input type="number" id="new-slot-qty" value="1" min="1" placeholder="QTY" style="width:35px;" title="Duplicate count">
+                <button id="btn-add-slot-row" class="action" style="padding: 4px 8px;">+</button>
+              </div>
+            </div>
+
+            <!-- OUTPUTS SUBSECTION -->
+            <div class="editor-sub-section">
+              <div class="editor-sub-section-title">
+                <span>OUTPUT DICE CONFIG</span>
+              </div>
+              <div id="move-edit-outputs-list" style="max-height: 100px; overflow-y:auto; margin-bottom: 8px;"></div>
+              <div class="editor-row">
+                <select id="new-out-size" style="flex:1;">
+                  <option value="4">d4</option>
+                  <option value="6">d6</option>
+                  <option value="8">d8</option>
+                  <option value="10">d10</option>
+                  <option value="12">d12</option>
+                  <option value="20">d20</option>
+                </select>
+                <input type="text" id="new-out-tag" placeholder="TAG" style="flex:1.2; text-transform: uppercase;">
+                <select id="new-out-target" style="flex:1.5;">
+                  <option value="Instant">INSTANT</option>
+                  <option value="Environment">ENVIRONMENT</option>
+                  <option value="Self">SELF</option>
+                  <option value="Creature">CREATURE</option>
+                </select>
+                <select id="new-out-type" style="flex:1.2;">
+                  <option value="strike">STRIKE</option>
+                  <option value="guard">GUARD</option>
+                  <option value="maneuver">MANEUVER</option>
+                </select>
+                <button id="btn-add-output-row" class="action" style="padding: 4px 8px;">+</button>
+              </div>
+            </div>
+
+            <div class="control-row" style="border:none; padding:0; justify-content: space-between; gap: 4px; margin-top:5px;">
+              <button id="btn-delete-move" class="danger">DELETE</button>
+              <button id="btn-save-move" class="action" style="width:60%;">SAVE MOVE</button>
+            </div>
+          `;
+
+          const renderSlotsFormList = () => {
+              const list = document.getElementById('move-edit-slots-list');
+              list.innerHTML = '';
+              if (move.slots.length === 0) { list.innerHTML = '<div style="color:#555; font-size:10px; text-align:center; padding:5px;">NO SLOTS CONFIGURED</div>'; return; }
+              move.slots.forEach((slot, sIdx) => {
+                  const row = document.createElement('div');
+                  row.className = 'editor-row';
+                  row.style.marginBottom = '4px';
+                  row.innerHTML = `<span style="font-size:10px; color:#aaa; width:45px;">SLOT ${sIdx+1}:</span><span style="font-size:10px; font-weight:bold; flex:1;">d${slot.sizeReq || 'any'} (${slot.valReqType === 'none' ? 'NO VAL REQ' : `${slot.valReqType} ${slot.valReq}`})</span><button class="danger" style="padding:2px 6px; font-size:9px;">X</button>`;
+                  row.querySelector('button').onclick = () => { move.slots.splice(sIdx, 1); renderSlotsFormList(); };
+                  list.appendChild(row);
+              });
+          };
+          renderSlotsFormList();
+
+          const renderOutputsFormList = () => {
+              const list = document.getElementById('move-edit-outputs-list');
+              list.innerHTML = '';
+              if (move.outputs.length === 0) { list.innerHTML = '<div style="color:#555; font-size:10px; text-align:center; padding:5px;">NO OUTPUTS CONFIGURED</div>'; return; }
+              move.outputs.forEach((out, oIdx) => {
+                  const row = document.createElement('div');
+                  row.className = 'editor-row';
+                  row.style.marginBottom = '4px';
+                  row.innerHTML = `<span style="font-size:10px; color:#aaa; width:40px;">DIE ${oIdx+1}:</span><span style="font-size:10px; font-weight:bold; flex:1; text-transform:uppercase;">d${out.size || 4} • ${out.tag || 'NO TAG'} • ${out.targetPool || 'Instant'} (${out.type || 'strike'})</span><button class="danger" style="padding:2px 6px; font-size:9px;">X</button>`;
+                  row.querySelector('button').onclick = () => { move.outputs.splice(oIdx, 1); renderOutputsFormList(); };
+                  list.appendChild(row);
+              });
+          };
+          renderOutputsFormList();
+
+          document.getElementById('btn-add-slot-row').onclick = () => {
+              const sizeReq = document.getElementById('new-slot-size').value;
+              const valReqType = document.getElementById('new-slot-valtype').value;
+              const valReq = parseInt(document.getElementById('new-slot-val').value, 10) || 0;
+              const qty = parseInt(document.getElementById('new-slot-qty').value, 10) || 1;
+              for (let i = 0; i < qty; i++) {
+                  move.slots.push({ sizeReq, valReqType, valReq });
+              }
+              renderSlotsFormList();
+          };
+
+          document.getElementById('btn-add-output-row').onclick = () => {
+              const size = parseInt(document.getElementById('new-out-size').value, 10) || 4;
+              const tag = document.getElementById('new-out-tag').value.trim().toUpperCase();
+              const targetPool = document.getElementById('new-out-target').value;
+              const type = document.getElementById('new-out-type').value;
+              move.outputs.push({ size, tag, targetPool, type });
+              renderOutputsFormList();
+          };
+
+          document.getElementById('btn-save-move').onclick = () => saveSelectedMove();
+          document.getElementById('btn-delete-move').onclick = () => deleteSelectedMove();
+        }
+      } else {
+        formContainer.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">NO MOVE SELECTED</div>';
+      }
+    }
+    
+    document.getElementById('btn-add-move-category').onclick = () => {
+      const catInput = document.getElementById('new-move-category-name');
+      const newCatName = catInput.value.trim();
+      if (newCatName) {
+        setDoc(doc(firestoreDb, "moves", newCatName), {});
+        catInput.value = '';
+      }
+    };
+
+    document.getElementById('btn-add-move').onclick = () => {
+      if (!selectedMoveCategory) { alert('Please select a category first.'); return; }
+      const newMoveId = 'move_' + Date.now();
+      const moveRef = doc(firestoreDb, "moves", selectedMoveCategory);
+      updateDoc(moveRef, {
+        [newMoveId]: {
+          title: 'New Move',
+          description: '',
+          slots: 1,
+          targetPool: 'instancePool',
+          type: 'strike',
+          tag: ''
+        }
+      });
+    };
+
+    function saveSelectedMove() {
+      if (!selectedMoveCategory || !selectedMoveId) return;
+      const move = movesData[selectedMoveCategory][selectedMoveId];
+      if (!move) return;
+      
+      const newMoveData = {
+        title: document.getElementById('move-edit-title').value,
+        description: document.getElementById('move-edit-desc').value,
+        slots: move.slots || [],
+        outputs: move.outputs || []
+      };
+
+      const moveRef = doc(firestoreDb, "moves", selectedMoveCategory);
+      updateDoc(moveRef, { [selectedMoveId]: newMoveData }).then(() => {
+          const btn = document.getElementById('btn-save-move');
+          if (btn) {
+              btn.innerText = 'SAVED!';
+              setTimeout(() => { btn.innerText = 'SAVE MOVE'; }, 1500);
+          }
+      });
+    }
+
+    function deleteSelectedMove() {
+      if (!selectedMoveCategory || !selectedMoveId) return;
+      if (!confirm(`Are you sure you want to delete this move?`)) return;
+
+      const moveRef = doc(firestoreDb, "moves", selectedMoveCategory);
+      updateDoc(moveRef, { [selectedMoveId]: deleteField() });
+      selectedMoveId = null;
+      renderMovesTerminal();
+    }
+
+    // ==========================================
+    // 10. SHARD MOVES TERMINAL
+    // ==========================================
+    let selectedShardForMoves = null;
+    let selectedCategoryForShardMoves = null;
+    
+    function renderShardMovesTerminal() {
+      const categorySelect = document.getElementById('shard-moves-category-select');
+      const shardSelect = document.getElementById('shard-moves-shard-select');
+      const categoryMovesList = document.getElementById('shard-moves-category-moves-list');
+      const mappedList = document.getElementById('shard-moves-mapped-list');
+
+      if (!categorySelect || !shardSelect || !categoryMovesList || !mappedList) return;
+
+      // Populate Category Select
+      const categories = Object.keys(movesData).sort();
+      const prevCat = categorySelect.value || selectedCategoryForShardMoves;
+      categorySelect.innerHTML = '';
+      categories.forEach(catId => {
+          const opt = document.createElement('option');
+          opt.value = catId;
+          opt.innerText = catId;
+          categorySelect.appendChild(opt);
+      });
+      if (prevCat && categories.includes(prevCat)) {
+          categorySelect.value = prevCat;
+          selectedCategoryForShardMoves = prevCat;
+      } else if (categories.length > 0) {
+          selectedCategoryForShardMoves = categories[0];
+          categorySelect.value = categories[0];
+      }
+
+      categorySelect.onchange = () => {
+          selectedCategoryForShardMoves = categorySelect.value;
+          renderShardMovesTerminal();
+      };
+
+      // Populate Shard Select
+      const shards = Object.keys(shardsData).sort();
+      
+      if (!selectedShardForMoves && activeEncounterController && shards.includes(activeEncounterController)) {
+          selectedShardForMoves = activeEncounterController;
+      }
+
+      const prevShard = selectedShardForMoves || shardSelect.value;
+      shardSelect.innerHTML = '';
+      shards.forEach(shardId => {
+          const opt = document.createElement('option');
+          opt.value = shardId;
+          const playerName = shardMappingData[shardId] || 'UNMAPPED';
+          opt.innerText = `${shardId} (${playerName})`;
+          shardSelect.appendChild(opt);
+      });
+      if (prevShard && shards.includes(prevShard)) {
+          shardSelect.value = prevShard;
+          selectedShardForMoves = prevShard;
+      } else if (shards.length > 0) {
+          selectedShardForMoves = shards[0];
+          shardSelect.value = shards[0];
+      }
+
+      shardSelect.onchange = () => {
+          selectedShardForMoves = shardSelect.value;
+          renderShardMovesTerminal();
+      };
+
+      // Render Category Moves (Left column)
+      categoryMovesList.innerHTML = '';
+      if (selectedCategoryForShardMoves && movesData[selectedCategoryForShardMoves]) {
+          const categoryMoves = movesData[selectedCategoryForShardMoves];
+          Object.entries(categoryMoves).forEach(([moveId, move]) => {
+              const item = document.createElement('div');
+              item.className = 'moves-list-item';
+              item.innerText = move.title || moveId;
+              item.draggable = true;
+              item.ondragstart = (e) => {
+                  e.dataTransfer.setData('moveId', moveId);
+                  e.dataTransfer.setData('dragSource', 'category-moves');
+              };
+              categoryMovesList.appendChild(item);
+          });
+      } else {
+          categoryMovesList.innerHTML = '<div style="text-align: center; color: #666; padding: 10px;">NO CATEGORY</div>';
+      }
+
+      // Render Assigned Shard Moves (Right column)
+      mappedList.innerHTML = '';
+      if (selectedShardForMoves) {
+          const shard = shardsData[selectedShardForMoves];
+          const assignedMoves = shard?.moves || [];
+
+          assignedMoves.forEach((moveId, index) => {
+              const move = findMoveById(moveId);
+              const item = document.createElement('div');
+              item.className = 'moves-list-item';
+              item.innerText = move?.title || moveId;
+              item.draggable = true;
+              item.ondragstart = (e) => {
+                  e.dataTransfer.setData('moveId', moveId);
+                  e.dataTransfer.setData('dragSource', 'shard-moves');
+                  e.dataTransfer.setData('moveIndex', index);
+              };
+              mappedList.appendChild(item);
+          });
+
+          if (assignedMoves.length === 0) {
+              mappedList.innerHTML = '<div style="text-align: center; color: #666; padding: 10px;">NO MOVES ASSIGNED</div>';
+          };
+      }
+
+      // Drop Handler for adding Moves
+      mappedList.ondragover = (e) => { e.preventDefault(); mappedList.style.borderColor = '#008b00'; };
+      mappedList.ondragleave = () => { mappedList.style.borderColor = ''; };
+      mappedList.ondrop = (e) => {
+          e.preventDefault();
+          mappedList.style.borderColor = '';
+          const moveId = e.dataTransfer.getData('moveId');
+          const dragSource = e.dataTransfer.getData('dragSource');
+          if (dragSource === 'category-moves' && moveId) {
+              addMoveToSelectedShard(moveId);
+          }
+      };
+
+      // Drop Handler for removing Moves
+      const deleteZone = document.getElementById('shard-moves-delete-zone');
+      if (deleteZone) {
+          deleteZone.ondragover = (e) => { e.preventDefault(); deleteZone.style.borderColor = '#ff4444'; deleteZone.style.background = 'rgba(255, 68, 68, 0.2)'; };
+          deleteZone.ondragleave = () => { deleteZone.style.borderColor = ''; deleteZone.style.background = ''; };
+          deleteZone.ondrop = (e) => {
+              e.preventDefault();
+              deleteZone.style.borderColor = '';
+              deleteZone.style.background = '';
+              const dragSource = e.dataTransfer.getData('dragSource');
+              const moveIndexStr = e.dataTransfer.getData('moveIndex');
+              if (dragSource === 'shard-moves' && moveIndexStr !== "") {
+                  const moveIndex = parseInt(moveIndexStr, 10);
+                  removeMoveFromSelectedShard(moveIndex);
+              }
+          };
+      }
+    }
+
+    function addMoveToSelectedShard(moveId) {
+      if (!selectedShardForMoves) return;
+      const currentMoves = shardsData[selectedShardForMoves]?.moves || [];
+      if (!currentMoves.includes(moveId)) {
+        const newMoves = [...currentMoves, moveId];
+        update(ref(realtimeDb), { [`gameState/shards/${selectedShardForMoves}/moves`]: newMoves });
+      }
+    }
+
+    function removeMoveFromSelectedShard(index) {
+      if (!selectedShardForMoves) return;
+      const currentMoves = [...(shardsData[selectedShardForMoves]?.moves || [])];
+      if (index >= 0 && index < currentMoves.length) {
+          currentMoves.splice(index, 1);
+          update(ref(realtimeDb), { [`gameState/shards/${selectedShardForMoves}/moves`]: currentMoves });
+      }
+    }
+
+    function findMoveById(moveId) {
+      for (const category in movesData) {
+        if (movesData[category][moveId]) {
+          return movesData[category][moveId];
+        }
+      }
+      return null;
+    }
+
+    // Initial renders
+    renderShardMovesTerminal();
+  </script>
+</body>
+</html>

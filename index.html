@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eschaton Monopoly</title>
+  <link rel="stylesheet" href="effects.css">
+  <script src="water-physics.js"></script>  
+  <style>
+    /* --- MONOPOLY CHANCE CARD THEME (DARK) --- */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #000000;
+      color: #ffffff;
+      font-family: 'Arial', sans-serif; 
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    
+    .monopoly-card {
+      background: #111;
+      border: 4px solid #fff;
+      border-radius: 8px;
+      width: 300px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: inset 0 0 0 3px #111, inset 0 0 0 5px #fff; 
+    }
+    
+    .monopoly-card h1 {
+      font-size: 24px;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+      border-bottom: 3px solid #fff;
+      padding-bottom: 10px;
+      letter-spacing: 2px;
+    }
+
+    .monopoly-card p {
+      font-size: 16px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="element-wrapper q-card-wrapper" id="qcard-0">
+    <div class="surface-box monopoly-card is-deep">
+      <div class="card-inner">
+        <h1>CHANCE</h1>
+        <p>There is absolutely nothing to see here.</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import the database configuration
+    import { realtimeDb } from './firebase-config.js';
+    
+    // Import your universal background engines
+    import { initializePresence } from './presence.js';
+    import { initializeStageManager } from './stage-manager.js';
+
+    // Ignite the background engines. 
+    // Stage Manager will automatically listen for stage changes and handle the fade/redirect.
+    initializePresence();
+    initializeStageManager();
+  </script>
+</body>
+</html>

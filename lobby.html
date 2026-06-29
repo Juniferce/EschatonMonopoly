@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eschaton Monopoly - Lobby</title>
+  <link rel="stylesheet" href="effects.css">
+  <script src="water-physics.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background-color: #000000;
+      color: #ffffff;
+      font-family: 'Arial', sans-serif;
+      height: 100vh;
+      overflow: hidden; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* --- WIRE UP THE EFFECTS.CSS WIGGLE CLASS --- */
+    .wiggle {
+      animation: extremeWiggle 0.4s infinite linear !important;
+    }
+
+    /* --- CENTER TEXT WRAPPER (Handles layout only - NO conflicts) --- */
+    #center-text-wrapper {
+      position: absolute;
+      top: 50%; 
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* --- CENTER TEXT --- */
+    #center-text {
+      color: #888888;
+      font-size: 20px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-align: center;
+      max-width: 250px;
+      opacity: 1; /* Forced to 1 so you can see it working instantly bro! */
+      transition: opacity 1.5s ease-in-out;
+    }
+
+    /* --- ORBIT SYSTEM --- */
+    #orbit-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      z-index: 2;
+    }
+
+    .player-anchor {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100px;
+      height: 100px;
+      margin-left: -50px; 
+      margin-top: -50px; 
+      transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .player-node {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* --- STANDARD CIRCULAR SHARD --- */
+    .player-shard {
+      width: 90px;
+      height: 90px;
+      background-color: #111;
+      border-radius: 50%; 
+      border: 3px solid #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      will-change: transform, filter, opacity;
+      box-shadow: inset 0 0 10px rgba(255,255,255,0.4);
+      transition: all 0.5s ease;
+      transform: scale(1.2);
+    }
+
+    /* Segregate extremeWiggle and waterRefraction to prevent filter collisions */
+    .player-shard.is-visible {
+      animation: 
+        simpleFadeIn 1s ease-out forwards,
+        liquidBob 5s ease-in-out infinite,
+        extremeWiggle 0.4s infinite linear;
+    }
+
+    /* Inner layer wrapper lets the secondary refraction animation run concurrently */
+    .player-refraction-wrapper {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .player-shard.is-visible .player-refraction-wrapper {
+      animation: waterRefraction 0.4s infinite linear;
+    }
+
+    .player-name {
+      font-size: 14px;
+      font-weight: 900;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 0px #000; 
+      transition: all 0.5s ease;
+    }
+
+    /* --- OFFLINE STATE MODIFIERS --- */
+    .offline-shard {
+      border-color: #444 !important;
+      background-color: #0a0a0a !important;
+      box-shadow: none !important;
+      opacity: 0.6; 
+    }
+
+    .offline-shard .player-name {
+      color: #555 !important;
+      text-shadow: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <svg width="0" height="0" style="position:absolute; z-index:-1;">
+    <defs>
+      <filter id="extreme-1">
+        <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="1" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+      <filter id="extreme-2">
+        <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="2" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+      <filter id="extreme-3">
+        <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="3" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+      <filter id="extreme-4">
+        <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise" seed="4" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="sketch-1">
+        <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="1" result="noise" seed="5" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+      <filter id="sketch-2">
+        <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="1" result="noise" seed="6" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+      <filter id="sketch-3">
+        <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="1" result="noise" seed="7" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+      <filter id="sketch-4">
+        <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="1" result="noise" seed="8" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+
+  <div id="center-text-wrapper">
+    <p class="wiggle" id="center-text">Waiting for the Narrator to begin the experience</p>
+  </div>
+  
+  <div id="orbit-ring"></div>
+
+  <script type="module">
+    import { initializeStageManager } from './stage-manager.js';
+    import { initializePresence } from './presence.js'; 
+    import { realtimeDb, firestoreDb } from './firebase-config.js';
+    import { ref, onValue, get, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    initializeStageManager();
+    initializePresence();
+
+    const orbitRing = document.getElementById('orbit-ring');
+    const centerText = document.getElementById('center-text');
+    
+    // --- SHARD ASSIGNMENT ---
+    async function assignLowestShard(playerName) {
+      const shardMappingRef = ref(realtimeDb, 'players/shardMapping');
+      const snapshot = await get(shardMappingRef);
+      const mapping = snapshot.val() || {};
+
+      for (let i = 1; i <= 8; i++) {
+        if (mapping[`shard-${i}`] === playerName) {
+          console.log(`${playerName} is already assigned to shard-${i}`);
+          return; 
+        }
+      }
+
+      let targetShard = null;
+      for (let i = 1; i <= 8; i++) {
+        if (!mapping[`shard-${i}`] || mapping[`shard-${i}`] === "") {
+          targetShard = i;
+          break;
+        }
+      }
+
+      if (targetShard) {
+        const updates = {};
+        updates[`players/shardMapping/shard-${targetShard}`] = playerName;
+        await update(ref(realtimeDb), updates);
+        console.log(`Successfully assigned ${playerName} to shard-${targetShard}`);
+      } else {
+        console.warn("Lobby is full! No empty shards available for", playerName);
+      }
+    }
+
+    // --- 0. QUIZ COMPLETION GATEKEEPER ---
+    async function verifyAccess() {
+      const localDeviceId = localStorage.getItem('deviceId');
+
+      if (!localDeviceId) {
+        window.location.href = 'quiz.html'; 
+        return;
+      }
+
+      try {
+        const mappingSnap = await get(ref(realtimeDb, 'players/deviceMapping'));
+        const mappingData = mappingSnap.val() || {};
+        
+        let localPlayer = null;
+        for (const [playerName, mappedDeviceId] of Object.entries(mappingData)) {
+          if (mappedDeviceId === localDeviceId) {
+            localPlayer = playerName;
+            break;
+          }
+        }
+
+        if (!localPlayer) {
+          window.location.href = 'quiz.html';
+          return;
+        }
+
+        const resultsDoc = await getDoc(doc(firestoreDb, "quiz", "results"));
+        
+        if (resultsDoc.exists()) {
+          const docData = resultsDoc.data();
+          if (!docData[localPlayer]) {
+            window.location.href = 'quiz.html';
+            return;
+          }
+        } else {
+          window.location.href = 'quiz.html';
+          return;
+        }
+        
+        await assignLowestShard(localPlayer);
+        igniteLobby();
+
+      } catch (error) {
+        console.error("Gatekeeper verification failed: ", error);
+        igniteLobby(); 
+      }
+    }
+
+    // --- MAIN LOBBY ENGINE ---
+    function igniteLobby() {
+      const playersRef = ref(realtimeDb, 'players');
+      const gameStateRef = ref(realtimeDb, 'gameState');
+
+      let currentPlayerCount = 0;
+      let currentCountdownTarget = null;
+      let countdownInterval = null;
+
+      let currentDeviceMapping = {};
+      let currentConnected = {};
+      let currentQuizResults = {};
+
+      let ORBIT_RADIUS = Math.min(window.innerWidth * 0.35, 220); 
+
+      window.addEventListener('resize', () => {
+        ORBIT_RADIUS = Math.min(window.innerWidth * 0.35, 220);
+        triggerRender(); 
+      });
+
+      onValue(playersRef, (snapshot) => {
+        const data = snapshot.val() || {};
+        currentDeviceMapping = data.deviceMapping || {};
+        currentConnected = data.playersConnected || {};
+        triggerRender();
+      });
+
+      onSnapshot(doc(firestoreDb, "quiz", "results"), (docSnap) => {
+        if (docSnap.exists()) {
+          currentQuizResults = docSnap.data();
+        } else {
+          currentQuizResults = {};
+        }
+        triggerRender();
+      });
+
+      function triggerRender() {
+        const activePlayers = [];
+
+        Object.keys(currentDeviceMapping).forEach(playerName => {
+          const deviceId = currentDeviceMapping[playerName];
+          
+          if (deviceId && deviceId !== "") {
+            activePlayers.push({
+              name: playerName,
+              isOnline: currentConnected[playerName] === true,
+              hasCompletedQuiz: !!currentQuizResults[playerName] 
+            });
+          }
+        });
+
+        activePlayers.sort((a, b) => a.name.localeCompare(b.name));
+
+        currentPlayerCount = activePlayers.length;
+        processCenterText();
+        renderOrbit(activePlayers);
+      }
+
+      function renderOrbit(activePlayers) {
+        const count = activePlayers.length;
+        const activeNames = activePlayers.map(p => p.name);
+        
+        const existingAnchors = Array.from(document.querySelectorAll('.player-anchor'));
+        existingAnchors.forEach(anchor => {
+          if (!activeNames.includes(anchor.dataset.name)) { anchor.remove(); }
+        });
+
+        activePlayers.forEach((playerObj, index) => {
+          const playerName = playerObj.name;
+          const isOnline = playerObj.isOnline;
+          const hasCompletedQuiz = playerObj.hasCompletedQuiz;
+
+          let anchor = document.querySelector(`.player-anchor[data-name="${playerName}"]`);
+          
+          if (!anchor) {
+            const elapsedSeconds = performance.now() / 1000;
+            anchor = document.createElement('div');
+            anchor.className = 'player-anchor';
+            anchor.dataset.name = playerName;
+            
+            // Added internal nested wrapper layer for non-conflicting filter animations
+            anchor.innerHTML = `
+              <div class="player-node" style="animation-delay: -${elapsedSeconds}s">
+                <div class="player-shard is-visible">
+                  <div class="player-refraction-wrapper">
+                    <span class="player-name"></span>
+                  </div>
+                </div>
+              </div>
+            `;
+            orbitRing.appendChild(anchor);
+          }
+
+          const shardDiv = anchor.querySelector('.player-shard');
+          const nameSpan = anchor.querySelector('.player-name');
+
+          if (!isOnline) {
+            shardDiv.classList.add('offline-shard');
+            nameSpan.innerText = 'OFFLINE';
+          } else if (!hasCompletedQuiz) {
+            shardDiv.classList.add('offline-shard'); 
+            nameSpan.innerText = 'WAITING...';
+          } else {
+            shardDiv.classList.remove('offline-shard');
+            nameSpan.innerText = playerName;
+          }
+
+          if (count === 1) {
+            anchor.style.transform = `translate(0px, 0px)`;
+          } else {
+            const angleDeg = (360 / count) * index;
+            const angleRad = angleDeg * (Math.PI / 180);
+            const x = Math.cos(angleRad) * ORBIT_RADIUS;
+            const y = Math.sin(angleRad) * ORBIT_RADIUS;
+            anchor.style.transform = `translate(${x}px, ${y}px)`;
+          }
+        });
+      }
+
+      // --- 2. TIMECODE & TEXT MANAGER ---
+      onValue(gameStateRef, (snapshot) => {
+        const state = snapshot.val() || {};
+        currentCountdownTarget = state.countdownTarget || null;
+        processCenterText();
+      });
+
+      function processCenterText() {
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+
+        centerText.classList.add("wiggle");
+
+        if (currentCountdownTarget) {
+          centerText.style.opacity = 1;
+          
+          countdownInterval = setInterval(() => {
+            const timeLeft = currentCountdownTarget - Date.now();
+            
+            if (timeLeft > 0) {
+              const seconds = Math.ceil(timeLeft / 1000);
+              centerText.innerText = `EXPERIENCE BEGINS IN: ${seconds}`;
+              centerText.style.color = '#ffffff'; 
+            } else {
+              centerText.innerText = "BEGINNING...";
+              centerText.style.color = '#00ff00'; 
+              clearInterval(countdownInterval);
+            }
+          }, 100); 
+          
+        } else {
+          centerText.innerText = "Waiting for the Narrator to begin the experience";
+          centerText.style.color = '#888888';
+          centerText.style.opacity = 1; // Unlocked so it boils natively on page setup
+        }
+      }
+
+      // --- BULLETPROOF ROTATION ENGINE ---
+      const ROTATION_SPEED = 10; 
+
+      function renderRotation() {
+        const currentTime = Date.now() / 1000; 
+        const currentAngle = (currentTime * ROTATION_SPEED) % 360;
+
+        orbitRing.style.transform = `rotate(${currentAngle}deg)`;
+
+        const nodes = document.querySelectorAll('.player-node');
+        nodes.forEach(node => {
+          node.style.transform = `rotate(-${currentAngle}deg)`;
+        });
+
+        requestAnimationFrame(renderRotation);
+      }
+
+      renderRotation();
+    }
+
+    verifyAccess();
+  </script>
+</body>
+</html>
