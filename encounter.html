@@ -387,7 +387,7 @@
     };
 
     async function verifyAccess() {
-      const localDeviceId = sessionStorage.getItem('deviceId');
+      const localDeviceId = localStorage.getItem('deviceId');
       if (!localDeviceId) { window.location.href = 'index.html'; return; }
       try {
         const mappingSnap = await get(ref(realtimeDb, 'players/deviceMapping'));
