@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KARASK</title>
+  <title>Everyone is John RPG</title>
 
   <!-- Prevent 404 favicon error in dev console -->
   <link rel="icon" href="data:,">
@@ -522,6 +522,12 @@
     </div>
   </header>
 
+  <!-- Shared D6 Roll Status Banner for GM & All Players -->
+  <div id="shared-roll-status-banner" class="wiggle hidden" style="text-align: center; font-size: 1.1rem; padding: 12px 0; margin-bottom: 20px; border-top: 1px solid #333; border-bottom: 1px solid #333;">
+    <span id="shared-roll-banner-text">ROLL RESULT: ?</span>
+    <button id="shared-clear-roll-btn" onclick="gmClearRollPrompt()" class="hidden" style="margin-left: 16px; font-size: 0.75rem; padding: 3px 8px;">[ CLEAR ROLL ]</button>
+  </div>
+
   <main style="flex: 1; display: flex; width: 100%;">
 
     <!-- PLAYER VIEW -->
@@ -566,12 +572,6 @@
           <button onclick="gmPromptD6()">[ PROMPT D6 ROLL ]</button>
           <button onclick="openAddVoiceModal()">[ + ADD VOICE ]</button>
         </div>
-      </div>
-
-      <!-- Live D6 Roll Result Banner in GM & Player View -->
-      <div id="gm-roll-status-banner" class="wiggle hidden" style="text-align: center; font-size: 1.1rem; padding: 12px 0; border-top: 1px solid #333; border-bottom: 1px solid #333;">
-        <span id="gm-roll-banner-text">ROLL RESULT: ?</span>
-        <button onclick="gmClearRollPrompt()" style="margin-left: 16px; font-size: 0.75rem; padding: 3px 8px;">[ CLEAR ROLL ]</button>
       </div>
 
       <div id="gm-voices-grid" class="gm-voices-grid"></div>
@@ -745,12 +745,43 @@
         }
       }
 
+      renderRollBanner(rollPrompt);
+
       if (!activeRoleKey) return;
 
       if (isGM) {
         renderGMScreen(rollPrompt);
       } else {
         renderPlayerScreen(biddingActive, rollPrompt);
+      }
+    }
+
+    function renderRollBanner(rollPrompt) {
+      const rollBanner = document.getElementById('shared-roll-status-banner');
+      const bannerText = document.getElementById('shared-roll-banner-text');
+      const clearBtn = document.getElementById('shared-clear-roll-btn');
+
+      if (!rollBanner || !bannerText) return;
+
+      if (rollPrompt && rollPrompt.active) {
+        rollBanner.classList.remove('hidden');
+        const targetName = rollPrompt.targetVoiceName || 'UNKNOWN';
+
+        if (rollPrompt.result !== null && rollPrompt.result !== undefined) {
+          bannerText.innerText = `${targetName.toUpperCase()} ROLLED A ${rollPrompt.result}!`;
+        } else if (rollPrompt.status === 'rolling') {
+          bannerText.innerText = `${targetName.toUpperCase()} IS ROLLING THE D6...`;
+        } else {
+          bannerText.innerText = `PROMPTED: WAITING FOR ${targetName.toUpperCase()} TO ROLL A D6...`;
+        }
+
+        if (isGM) {
+          clearBtn.classList.remove('hidden');
+        } else {
+          clearBtn.classList.add('hidden');
+        }
+      } else {
+        rollBanner.classList.add('hidden');
       }
     }
 
@@ -875,6 +906,8 @@
       if (isRollingLocal) return;
       isRollingLocal = true;
 
+      db.ref('rollPrompt').update({ status: 'rolling' });
+
       const displayEl = document.getElementById('d6-display-val');
       let ticks = 0;
 
@@ -888,7 +921,8 @@
           displayEl.innerText = finalRoll;
 
           db.ref('rollPrompt').update({
-            result: finalRoll
+            result: finalRoll,
+            status: 'done'
           });
 
           isRollingLocal = false;
@@ -924,22 +958,6 @@
         selectEl.appendChild(opt);
       });
       selectEl.value = localData.controllerKey || currentSelectedVal || 'NONE';
-
-      // Render D6 Status Banner
-      const rollBanner = document.getElementById('gm-roll-status-banner');
-      const bannerText = document.getElementById('gm-roll-banner-text');
-
-      if (rollPrompt && rollPrompt.active) {
-        rollBanner.classList.remove('hidden');
-        const targetName = rollPrompt.targetVoiceName || 'UNKNOWN';
-        if (rollPrompt.result !== null && rollPrompt.result !== undefined) {
-          bannerText.innerText = `${targetName.toUpperCase()} ROLLED A ${rollPrompt.result}`;
-        } else {
-          bannerText.innerText = `WAITING FOR ${targetName.toUpperCase()} TO ROLL...`;
-        }
-      } else {
-        rollBanner.classList.add('hidden');
-      }
 
       // Render GM Voices Grid
       const grid = document.getElementById('gm-voices-grid');
