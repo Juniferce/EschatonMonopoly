@@ -3,72 +3,1150 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Eschaton Monopoly</title>
-  <link rel="stylesheet" href="effects.css">
-  <script src="water-physics.js"></script>  
+  <title>KARASK</title>
+
+  <!-- Prevent 404 favicon error in dev console -->
+  <link rel="icon" href="data:,">
+
+  <!-- Firebase v8 Compatibility SDKs (Realtime Database only, no Auth needed) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
   <style>
-    /* --- MONOPOLY CHANCE CARD THEME (DARK) --- */
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border: none;
+      outline: none;
+    }
+
     body {
       background-color: #000000;
       color: #ffffff;
-      font-family: 'Arial', sans-serif; 
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: bold;
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
+      padding: 24px;
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    /* Target class for the hand-drawn wiggle effect on structural blocks */
+    .wiggle {
+      animation: squiggly-anim 0.36s step-end infinite;
+      will-change: filter;
+    }
+
+    /* Stagger timing & displacement variations so elements don't wiggle in sync */
+    .wiggle:nth-child(2n) {
+      animation-delay: -0.11s;
+      animation-duration: 0.43s;
+    }
+
+    .wiggle:nth-child(3n) {
+      animation-delay: -0.23s;
+      animation-duration: 0.31s;
+      animation-name: squiggly-anim-alt;
+    }
+
+    .wiggle:nth-child(5n) {
+      animation-delay: -0.17s;
+      animation-duration: 0.49s;
+    }
+
+    /* Keyframe animation toggling organic SVG filter seeds */
+    @keyframes squiggly-anim {
+      0%   { filter: url('#wiggle-0'); }
+      20%  { filter: url('#wiggle-1'); }
+      40%  { filter: url('#wiggle-2'); }
+      60%  { filter: url('#wiggle-3'); }
+      80%  { filter: url('#wiggle-4'); }
+    }
+
+    /* Alternate keyframe animation using distinct filter seed sets & sequences */
+    @keyframes squiggly-anim-alt {
+      0%   { filter: url('#wiggle-alt-2'); }
+      20%  { filter: url('#wiggle-alt-0'); }
+      40%  { filter: url('#wiggle-alt-4'); }
+      60%  { filter: url('#wiggle-alt-1'); }
+      80%  { filter: url('#wiggle-alt-3'); }
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
-      overflow: hidden;
+      width: 100%;
+      margin-bottom: 24px;
     }
-    
-    .monopoly-card {
-      background: #111;
-      border: 4px solid #fff;
-      border-radius: 8px;
-      width: 300px;
-      padding: 20px;
-      text-align: center;
-      box-shadow: inset 0 0 0 3px #111, inset 0 0 0 5px #fff; 
-    }
-    
-    .monopoly-card h1 {
-      font-size: 24px;
-      font-weight: 900;
+
+    .header-role {
+      font-size: 0.95rem;
+      letter-spacing: 2px;
       text-transform: uppercase;
-      margin-bottom: 15px;
-      border-bottom: 3px solid #fff;
-      padding-bottom: 10px;
+    }
+
+    .header-energy {
+      font-size: 1.25rem;
+      font-weight: bold;
       letter-spacing: 2px;
     }
 
-    .monopoly-card p {
-      font-size: 16px;
+    button {
+      background: #000000;
+      color: #ffffff;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.95rem;
       font-weight: bold;
+      padding: 8px 14px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #ffffff;
+      color: #000000;
+    }
+
+    button:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      background-color: #000000;
+      color: #888888;
+    }
+
+    input[type="text"], input[type="password"], select {
+      background: #000000;
+      color: #ffffff;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 1rem;
+      padding: 6px 10px;
+      border-bottom: 1px solid #ffffff;
+      border-radius: 0;
+    }
+
+    select {
+      cursor: pointer;
+    }
+
+    .fade-section {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+    }
+
+    .fade-section.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .player-main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 1fr;
+      gap: 32px;
+      align-items: center;
+      flex: 1;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      min-height: 60vh;
+    }
+
+    @media (max-width: 850px) {
+      .player-main-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+        text-align: center;
+      }
+    }
+
+    .column-title {
+      font-size: 1.15rem;
+      letter-spacing: 3px;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      text-decoration: underline;
+      text-underline-offset: 6px;
+      font-weight: 800;
+    }
+
+    /* Left-aligned Specialties */
+    .specialties-container {
+      text-align: left;
+    }
+
+    ul.specialties-list {
+      list-style-type: square;
+      padding-left: 20px;
+      line-height: 1.8;
+      text-align: left;
+    }
+
+    ul.specialties-list li {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 8px;
+      word-break: break-word;
+    }
+
+    /* Right-aligned Impulses */
+    .impulses-container {
+      text-align: right;
+    }
+
+    ul.impulses-list {
+      list-style: none;
+      padding-left: 0;
+      line-height: 1.8;
+      text-align: right;
+    }
+
+    ul.impulses-list li {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 8px;
+      word-break: break-word;
+    }
+
+    ul.impulses-list li::after {
+      content: " •";
+      margin-left: 6px;
+      font-weight: bold;
+    }
+
+    /* Dead Center Controller Box */
+    .controller-center-box {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .controller-label {
+      font-size: 0.95rem;
+      letter-spacing: 3px;
+      margin-bottom: 12px;
+      opacity: 0.85;
+      font-weight: bold;
+    }
+
+    .controller-name {
+      font-size: 1.6rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      line-height: 1.3;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.96);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 20px;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .modal-overlay.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      text-align: center;
+      max-width: 460px;
+      width: 100%;
+      transform: scale(0.95);
+      transition: transform 0.3s ease;
+    }
+
+    .modal-overlay.visible .modal-content {
+      transform: scale(1);
+    }
+
+    .modal-title {
+      font-size: 1.35rem;
+      letter-spacing: 3px;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+
+    .role-buttons-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 60vh;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .bid-stepper-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      margin: 24px 0;
+    }
+
+    .bid-value-display {
+      font-size: 2.2rem;
+      font-weight: bold;
+      min-width: 60px;
+      letter-spacing: 2px;
+    }
+
+    .d6-display-box {
+      font-size: 4.5rem;
+      font-weight: bold;
+      margin: 20px 0;
+      letter-spacing: 4px;
+    }
+
+    .gm-container {
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .gm-control-panel {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      padding-bottom: 20px;
+    }
+
+    .gm-voices-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 28px;
+    }
+
+    .gm-voice-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px 0;
+    }
+
+    .gm-voice-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .sub-text {
+      font-size: 0.85rem;
+      opacity: 0.75;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .error-msg {
+      color: #ff5555;
+      font-size: 0.85rem;
+      margin-top: 10px;
+      letter-spacing: 1px;
+    }
+
+    .hidden {
+      display: none !important;
     }
   </style>
 </head>
 <body>
-  
-  <div class="element-wrapper q-card-wrapper" id="qcard-0">
-    <div class="surface-box monopoly-card is-deep">
-      <div class="card-inner">
-        <h1>CHANCE</h1>
-        <p>There is absolutely nothing to see here.</p>
+
+  <!-- Hidden SVG filter definition block -->
+  <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style="position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none;" aria-hidden="true">
+    <defs>
+      <!-- Primary Wiggle Filter Set -->
+      <filter id="wiggle-0">
+        <feTurbulence type="turbulence" baseFrequency="0.012" numOctaves="1" result="noise" seed="0" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-1">
+        <feTurbulence type="turbulence" baseFrequency="0.012" numOctaves="1" result="noise" seed="15" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-2">
+        <feTurbulence type="turbulence" baseFrequency="0.012" numOctaves="1" result="noise" seed="30" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-3">
+        <feTurbulence type="turbulence" baseFrequency="0.012" numOctaves="1" result="noise" seed="45" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-4">
+        <feTurbulence type="turbulence" baseFrequency="0.012" numOctaves="1" result="noise" seed="60" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <!-- Secondary Alt Wiggle Filter Set with varied base frequencies and displacement scales -->
+      <filter id="wiggle-alt-0">
+        <feTurbulence type="turbulence" baseFrequency="0.018" numOctaves="1" result="noise" seed="101" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.6" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-alt-1">
+        <feTurbulence type="turbulence" baseFrequency="0.018" numOctaves="1" result="noise" seed="125" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.8" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-alt-2">
+        <feTurbulence type="turbulence" baseFrequency="0.015" numOctaves="1" result="noise" seed="149" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.4" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-alt-3">
+        <feTurbulence type="turbulence" baseFrequency="0.021" numOctaves="1" result="noise" seed="173" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.0" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-alt-4">
+        <feTurbulence type="turbulence" baseFrequency="0.014" numOctaves="1" result="noise" seed="197" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.8" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- ROLE SELECTION MODAL -->
+  <div id="role-modal" class="modal-overlay visible">
+    <div class="modal-content wiggle">
+      <h2 class="modal-title">WHO ARE YOU?</h2>
+      <div id="role-buttons-container" class="role-buttons-list">
+        <!-- Voice buttons injected dynamically -->
+      </div>
+
+      <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 16px; display: flex; flex-direction: column; gap: 8px;">
+        <button onclick="promptGMPassword('GM (Shawn)', 'Morwenna')">[ GM (SHAWN) ]</button>
+        <button onclick="promptGMPassword('Co-DM (Carter)', 'Soriak')">[ CO-DM (CARTER) ]</button>
       </div>
     </div>
   </div>
 
-  <script type="module">
-    // Import the database configuration
-    import { realtimeDb } from './firebase-config.js';
-    
-    // Import your universal background engines
-    import { initializePresence } from './presence.js';
-    import { initializeStageManager } from './stage-manager.js';
+  <!-- GM PASSWORD MODAL -->
+  <div id="password-modal" class="modal-overlay">
+    <div class="modal-content wiggle">
+      <h2 id="password-modal-title" class="modal-title">GM AUTHENTICATION</h2>
+      <p style="margin-bottom: 16px;" id="password-modal-sub">Enter password:</p>
+      <input type="password" id="gm-password-input" placeholder="Password..." style="width: 200px; text-align: center;" onkeydown="if(event.key==='Enter') submitGMPassword()">
+      <div style="margin-top: 20px; display: flex; justify-content: center; gap: 12px;">
+        <button onclick="submitGMPassword()">[ ENTER ]</button>
+        <button onclick="closePasswordModal()">[ CANCEL ]</button>
+      </div>
+      <div id="password-error-msg" class="error-msg hidden">ACCESS DENIED</div>
+    </div>
+  </div>
 
-    // Ignite the background engines. 
-    // Stage Manager will automatically listen for stage changes and handle the fade/redirect.
-    initializePresence();
-    initializeStageManager();
+  <!-- SECRET BIDDING MODAL -->
+  <div id="bidding-modal" class="modal-overlay">
+    <div class="modal-content wiggle">
+      <h2 class="modal-title">GM PROMPTED FOR BIDS</h2>
+      <div id="bidding-form-container">
+        <p style="margin-bottom: 12px; line-height: 1.5;">Choose Energy to bid for control of John:</p>
+        
+        <div class="bid-stepper-container">
+          <button onclick="adjustBidStep(-1)">[ - ]</button>
+          <span id="bid-stepper-value" class="bid-value-display">0</span>
+          <button onclick="adjustBidStep(1)">[ + ]</button>
+        </div>
+
+        <button id="submit-bid-btn" onclick="handleBidSubmitClick()">[ SUBMIT BID ]</button>
+      </div>
+      <div id="bid-submitted-msg" class="hidden">
+        <p style="font-size: 1.1rem; letter-spacing: 2px;">BID SUBMITTED</p>
+        <p class="sub-text" style="margin-top: 10px;">Waiting for GM to resolve bidding...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- D6 ROLL MODAL -->
+  <div id="d6-modal" class="modal-overlay">
+    <div class="modal-content wiggle">
+      <h2 class="modal-title">GM PROMPTED A D6 ROLL</h2>
+      <p style="margin-bottom: 12px;">Roll to determine success:</p>
+      <div id="d6-display-val" class="d6-display-box">?</div>
+      <div id="d6-roll-action-box">
+        <button id="roll-d6-btn" onclick="executeD6Roll()">[ ROLL D6 ]</button>
+      </div>
+      <div id="d6-result-done-box" class="hidden">
+        <p class="sub-text">Roll synced to GM. Waiting for GM...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD / RENAME VOICE MODAL FOR GM -->
+  <div id="voice-edit-modal" class="modal-overlay">
+    <div class="modal-content wiggle">
+      <h2 id="voice-edit-title" class="modal-title">ADD NEW VOICE</h2>
+      <input type="text" id="voice-edit-input" placeholder="Voice Name..." style="width: 220px; text-align: center;" onkeydown="if(event.key==='Enter') saveVoiceEdit()">
+      <div style="margin-top: 20px; display: flex; justify-content: center; gap: 12px;">
+        <button onclick="saveVoiceEdit()">[ SAVE ]</button>
+        <button onclick="closeVoiceEditModal()">[ CANCEL ]</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP HUD -->
+  <header class="wiggle">
+    <div class="header-role">
+      <span id="role-display-label">SELECTING ROLE...</span>
+      <button onclick="reopenRoleModal()" style="font-size: 0.75rem; margin-left: 12px; padding: 2px 6px;">[ CHANGE ]</button>
+    </div>
+    <div id="player-agency-display" class="header-energy hidden">
+      ENERGY: <span id="my-agency-value">10</span>
+    </div>
+  </header>
+
+  <main style="flex: 1; display: flex; width: 100%;">
+
+    <!-- PLAYER VIEW -->
+    <div id="player-view-container" class="player-main-grid hidden">
+      
+      <!-- LEFT CENTER: SPECIALTIES -->
+      <div id="mutations-section" class="specialties-container fade-section wiggle">
+        <h3 class="column-title">SPECIALTIES</h3>
+        <ul id="player-mutations-list" class="specialties-list"></ul>
+        <div id="player-add-mutation-box" style="margin-top: 16px;">
+          <input type="text" id="player-mutation-input" placeholder="New specialty..." style="width: 140px;">
+          <button onclick="playerAddMutation()">[ + ]</button>
+        </div>
+      </div>
+
+      <!-- DEAD CENTER: JOHN CONTROLLER STATUS -->
+      <div class="controller-center-box wiggle">
+        <div id="center-controller-name" class="controller-name">NO ONE IS CURRENTLY IN CONTROL:</div>
+      </div>
+
+      <!-- RIGHT CENTER: IMPULSES -->
+      <div id="impulses-section" class="impulses-container fade-section wiggle">
+        <h3 class="column-title">IMPULSES</h3>
+        <ul id="player-impulses-list" class="impulses-list"></ul>
+      </div>
+
+    </div>
+
+    <!-- GM VIEW -->
+    <div id="gm-view-container" class="gm-container hidden">
+      
+      <div class="gm-control-panel wiggle">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <label style="font-size: 0.9rem;">CONTROL:</label>
+          <select id="gm-active-controller-select"></select>
+          <button onclick="gmSetController()">[ SET CONTROL ]</button>
+        </div>
+
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+          <button onclick="gmPromptBids()">[ PROMPT FOR BIDS ]</button>
+          <button onclick="gmCloseBids()">[ CLOSE BIDS ]</button>
+          <button onclick="gmPromptD6()">[ PROMPT D6 ROLL ]</button>
+          <button onclick="openAddVoiceModal()">[ + ADD VOICE ]</button>
+        </div>
+      </div>
+
+      <!-- Live D6 Roll Result Banner in GM & Player View -->
+      <div id="gm-roll-status-banner" class="wiggle hidden" style="text-align: center; font-size: 1.1rem; padding: 12px 0; border-top: 1px solid #333; border-bottom: 1px solid #333;">
+        <span id="gm-roll-banner-text">ROLL RESULT: ?</span>
+        <button onclick="gmClearRollPrompt()" style="margin-left: 16px; font-size: 0.75rem; padding: 3px 8px;">[ CLEAR ROLL ]</button>
+      </div>
+
+      <div id="gm-voices-grid" class="gm-voices-grid"></div>
+
+    </div>
+
+  </main>
+
+  <script>
+    const firebaseConfig = {
+      databaseURL: "https://juni-karask-default-rtdb.firebaseio.com"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Generate unique client ID for occupancy tracking
+    const myClientId = 'client_' + Math.random().toString(36).substr(2, 9);
+
+    let activeRoleKey = null;   // e.g. 'voice_1' or 'GM'
+    let activeRoleName = null;  // e.g. 'Voice 1' or 'GM (Shawn)'
+    let isGM = false;
+
+    let pendingGMPargetRole = null;
+    let pendingGMPassword = null;
+
+    let voiceEditMode = 'ADD'; // 'ADD' or 'RENAME'
+    let editingVoiceKey = null;
+
+    let localData = {
+      controllerKey: 'NONE',
+      biddingActive: false,
+      rollPrompt: { active: false, targetVoiceKey: null, targetVoiceName: null, result: null },
+      voices: {}
+    };
+
+    let currentBidValue = 0;
+    let isConfirmingBid = false;
+    let isRollingLocal = false;
+
+    const defaultVoices = {
+      "voice_1": { name: "Voice 1", energy: 10, bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
+      "voice_2": { name: "Voice 2", energy: 10, bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
+      "voice_3": { name: "Voice 3", energy: 10, bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
+      "voice_4": { name: "Voice 4", energy: 10, bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
+      "voice_5": { name: "Voice 5", energy: 10, bid: 0, bidSubmitted: false, specialties: [], impulses: [] }
+    };
+
+    db.ref().on('value', snapshot => {
+      localData = snapshot.val() || {};
+      if (!localData.voices || Object.keys(localData.voices).length === 0) {
+        // Initialize defaults if database is completely empty
+        db.ref('voices').set(defaultVoices);
+        localData.voices = defaultVoices;
+      }
+      syncViewWithData();
+      renderRoleSelectionModal();
+    });
+
+    function renderRoleSelectionModal() {
+      const container = document.getElementById('role-buttons-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const voices = localData.voices || {};
+      Object.keys(voices).forEach(vKey => {
+        const vData = voices[vKey] || {};
+        const vName = vData.name || vKey;
+        const occ = vData.occupiedBy;
+        const isOccupied = occ && occ !== myClientId;
+
+        const btn = document.createElement('button');
+        if (isOccupied) {
+          btn.innerText = `[ ${vName.toUpperCase()} - TAKEN ]`;
+          btn.disabled = true;
+        } else {
+          btn.innerText = `[ ${vName.toUpperCase()} ]`;
+          btn.onclick = () => choosePlayerRole(vKey, vName);
+        }
+        container.appendChild(btn);
+      });
+    }
+
+    function choosePlayerRole(vKey, vName) {
+      disconnectPresence();
+
+      activeRoleKey = vKey;
+      activeRoleName = vName;
+      isGM = false;
+
+      // Occupy voice in Firebase
+      db.ref(`voices/${vKey}/occupiedBy`).set(myClientId);
+      db.ref(`voices/${vKey}/occupiedBy`).onDisconnect().remove();
+
+      document.getElementById('role-modal').classList.remove('visible');
+      document.getElementById('role-display-label').innerText = activeRoleName.toUpperCase();
+
+      document.getElementById('gm-view-container').classList.add('hidden');
+      document.getElementById('player-agency-display').classList.remove('hidden');
+      document.getElementById('player-view-container').classList.remove('hidden');
+
+      syncViewWithData();
+    }
+
+    function promptGMPassword(roleName, password) {
+      pendingGMPargetRole = roleName;
+      pendingGMPassword = password;
+      
+      document.getElementById('password-modal-title').innerText = roleName.toUpperCase();
+      document.getElementById('password-modal-sub').innerText = `Enter password for ${roleName}:`;
+      document.getElementById('gm-password-input').value = '';
+      document.getElementById('password-error-msg').classList.add('hidden');
+      document.getElementById('password-modal').classList.add('visible');
+      
+      setTimeout(() => document.getElementById('gm-password-input').focus(), 100);
+    }
+
+    function submitGMPassword() {
+      const entered = document.getElementById('gm-password-input').value.trim();
+      if (entered.toLowerCase() === pendingGMPassword.toLowerCase()) {
+        disconnectPresence();
+
+        activeRoleKey = 'GM';
+        activeRoleName = pendingGMPargetRole;
+        isGM = true;
+
+        document.getElementById('password-modal').classList.remove('visible');
+        document.getElementById('role-modal').classList.remove('visible');
+        document.getElementById('role-display-label').innerText = activeRoleName.toUpperCase();
+
+        document.getElementById('player-view-container').classList.add('hidden');
+        document.getElementById('player-agency-display').classList.add('hidden');
+        document.getElementById('gm-view-container').classList.remove('hidden');
+
+        syncViewWithData();
+      } else {
+        document.getElementById('password-error-msg').classList.remove('hidden');
+      }
+    }
+
+    function closePasswordModal() {
+      document.getElementById('password-modal').classList.remove('visible');
+    }
+
+    function disconnectPresence() {
+      if (activeRoleKey && activeRoleKey !== 'GM') {
+        db.ref(`voices/${activeRoleKey}/occupiedBy`).remove();
+      }
+    }
+
+    function reopenRoleModal() {
+      document.getElementById('role-modal').classList.add('visible');
+    }
+
+    function syncViewWithData() {
+      const rawControllerKey = localData.controllerKey || 'NONE';
+      const biddingActive = !!localData.biddingActive;
+      const rollPrompt = localData.rollPrompt || { active: false, targetVoiceKey: null, targetVoiceName: null, result: null };
+
+      // Update Center Controller Label safely
+      const centerLabel = document.getElementById('center-controller-name');
+      if (centerLabel) {
+        if (activeRoleKey && !isGM && rawControllerKey === activeRoleKey) {
+          centerLabel.innerText = "YOU ARE CURRENTLY IN CONTROL:";
+        } else if (rawControllerKey !== 'NONE' && localData.voices && localData.voices[rawControllerKey]) {
+          const vData = localData.voices[rawControllerKey];
+          const vName = (vData && vData.name) ? vData.name : rawControllerKey;
+          centerLabel.innerText = `${vName.toUpperCase()} IS CURRENTLY IN CONTROL:`;
+        } else {
+          centerLabel.innerText = "NO ONE IS CURRENTLY IN CONTROL:";
+        }
+      }
+
+      if (!activeRoleKey) return;
+
+      if (isGM) {
+        renderGMScreen(rollPrompt);
+      } else {
+        renderPlayerScreen(biddingActive, rollPrompt);
+      }
+    }
+
+    function renderPlayerScreen(biddingActive, rollPrompt) {
+      const vData = (localData.voices && localData.voices[activeRoleKey]) || { energy: 10, bid: 0, specialties: [], impulses: [] };
+      const currentEnergy = vData.energy ?? 10;
+
+      document.getElementById('my-agency-value').innerText = currentEnergy;
+
+      // Render Specialties (Left Center)
+      const specialtiesList = document.getElementById('player-mutations-list');
+      specialtiesList.innerHTML = '';
+      const specsArr = vData.specialties || [];
+      
+      specsArr.forEach(spec => {
+        const li = document.createElement('li');
+        li.innerText = spec;
+        specialtiesList.appendChild(li);
+      });
+
+      const specialtiesSection = document.getElementById('mutations-section');
+      if (specsArr.length > 0) {
+        specialtiesSection.classList.add('visible');
+        document.getElementById('player-add-mutation-box').classList.add('hidden');
+      } else {
+        specialtiesSection.classList.remove('visible');
+        document.getElementById('player-add-mutation-box').classList.remove('hidden');
+      }
+
+      // Render Impulses (Right Center)
+      const impulsesList = document.getElementById('player-impulses-list');
+      impulsesList.innerHTML = '';
+      const impulsesArr = vData.impulses || [];
+
+      impulsesArr.forEach(imp => {
+        const li = document.createElement('li');
+        li.innerText = imp;
+        impulsesList.appendChild(li);
+      });
+
+      const impulsesSection = document.getElementById('impulses-section');
+      if (impulsesArr.length > 0) {
+        impulsesSection.classList.add('visible');
+      } else {
+        impulsesSection.classList.remove('visible');
+      }
+
+      // Handle Secret Bidding Modal
+      const biddingModal = document.getElementById('bidding-modal');
+      if (biddingActive) {
+        biddingModal.classList.add('visible');
+        if (vData.bidSubmitted) {
+          document.getElementById('bidding-form-container').classList.add('hidden');
+          document.getElementById('bid-submitted-msg').classList.remove('hidden');
+        } else {
+          document.getElementById('bidding-form-container').classList.remove('hidden');
+          document.getElementById('bid-submitted-msg').classList.add('hidden');
+        }
+      } else {
+        biddingModal.classList.remove('visible');
+        currentBidValue = 0;
+        resetSubmitButton();
+        updateStepperDisplay();
+      }
+
+      // Handle D6 Roll Prompt Modal for Player
+      const d6Modal = document.getElementById('d6-modal');
+      const isTargetForRoll = rollPrompt.active && rollPrompt.targetVoiceKey === activeRoleKey;
+
+      if (isTargetForRoll) {
+        d6Modal.classList.add('visible');
+        if (rollPrompt.result !== null && rollPrompt.result !== undefined && !isRollingLocal) {
+          document.getElementById('d6-display-val').innerText = rollPrompt.result;
+          document.getElementById('d6-roll-action-box').classList.add('hidden');
+          document.getElementById('d6-result-done-box').classList.remove('hidden');
+        } else if (!isRollingLocal) {
+          document.getElementById('d6-display-val').innerText = '?';
+          document.getElementById('d6-roll-action-box').classList.remove('hidden');
+          document.getElementById('d6-result-done-box').classList.add('hidden');
+        }
+      } else {
+        d6Modal.classList.remove('visible');
+      }
+    }
+
+    function adjustBidStep(delta) {
+      const vData = (localData.voices && localData.voices[activeRoleKey]) || {};
+      const maxEnergy = vData.energy ?? 10;
+
+      currentBidValue = Math.max(0, Math.min(maxEnergy, currentBidValue + delta));
+      resetSubmitButton();
+      updateStepperDisplay();
+    }
+
+    function updateStepperDisplay() {
+      const stepper = document.getElementById('bid-stepper-value');
+      if (stepper) stepper.innerText = currentBidValue;
+    }
+
+    function resetSubmitButton() {
+      isConfirmingBid = false;
+      const btn = document.getElementById('submit-bid-btn');
+      if (btn) btn.innerText = "[ SUBMIT BID ]";
+    }
+
+    function handleBidSubmitClick() {
+      if (!activeRoleKey || isGM) return;
+
+      if (!isConfirmingBid) {
+        isConfirmingBid = true;
+        document.getElementById('submit-bid-btn').innerText = "[ CONFIRM? ]";
+      } else {
+        db.ref(`voices/${activeRoleKey}`).update({
+          bid: currentBidValue,
+          bidSubmitted: true
+        });
+        resetSubmitButton();
+      }
+    }
+
+    function executeD6Roll() {
+      if (isRollingLocal) return;
+      isRollingLocal = true;
+
+      const displayEl = document.getElementById('d6-display-val');
+      let ticks = 0;
+
+      const interval = setInterval(() => {
+        displayEl.innerText = Math.floor(Math.random() * 6) + 1;
+        ticks++;
+
+        if (ticks >= 18) {
+          clearInterval(interval);
+          const finalRoll = Math.floor(Math.random() * 6) + 1;
+          displayEl.innerText = finalRoll;
+
+          db.ref('rollPrompt').update({
+            result: finalRoll
+          });
+
+          isRollingLocal = false;
+        }
+      }, 55);
+    }
+
+    function playerAddMutation() {
+      const input = document.getElementById('player-mutation-input');
+      const val = input.value.trim();
+      if (!val || !activeRoleKey) return;
+
+      const vData = localData.voices[activeRoleKey] || {};
+      const list = vData.specialties || [];
+      list.push(val);
+
+      db.ref(`voices/${activeRoleKey}/specialties`).set(list);
+      input.value = '';
+    }
+
+    function renderGMScreen(rollPrompt) {
+      const selectEl = document.getElementById('gm-active-controller-select');
+      const currentSelectedVal = selectEl.value;
+      selectEl.innerHTML = '<option value="NONE">NONE</option>';
+
+      const voices = localData.voices || {};
+      Object.keys(voices).forEach(vKey => {
+        const vData = voices[vKey] || {};
+        const vName = vData.name || vKey;
+        const opt = document.createElement('option');
+        opt.value = vKey;
+        opt.innerText = vName;
+        selectEl.appendChild(opt);
+      });
+      selectEl.value = localData.controllerKey || currentSelectedVal || 'NONE';
+
+      // Render D6 Status Banner
+      const rollBanner = document.getElementById('gm-roll-status-banner');
+      const bannerText = document.getElementById('gm-roll-banner-text');
+
+      if (rollPrompt && rollPrompt.active) {
+        rollBanner.classList.remove('hidden');
+        const targetName = rollPrompt.targetVoiceName || 'UNKNOWN';
+        if (rollPrompt.result !== null && rollPrompt.result !== undefined) {
+          bannerText.innerText = `${targetName.toUpperCase()} ROLLED A ${rollPrompt.result}`;
+        } else {
+          bannerText.innerText = `WAITING FOR ${targetName.toUpperCase()} TO ROLL...`;
+        }
+      } else {
+        rollBanner.classList.add('hidden');
+      }
+
+      // Render GM Voices Grid
+      const grid = document.getElementById('gm-voices-grid');
+      grid.innerHTML = '';
+
+      Object.keys(voices).forEach(vKey => {
+        const vData = voices[vKey] || {};
+        const vName = vData.name || vKey;
+        const energyVal = vData.energy ?? 10;
+        const specsArr = vData.specialties || [];
+        const impsArr = vData.impulses || [];
+
+        const card = document.createElement('div');
+        card.className = 'gm-voice-card wiggle';
+
+        const specsHtml = specsArr.map((s, idx) => 
+          `<div class="item-row"><span>• ${escapeHtml(s)}</span><button onclick="gmRemoveItem('${vKey}', 'specialties', ${idx})">×</button></div>`
+        ).join('');
+
+        const impsHtml = impsArr.map((i, idx) => 
+          `<div class="item-row"><span>• ${escapeHtml(i)} •</span><button onclick="gmRemoveItem('${vKey}', 'impulses', ${idx})">×</button></div>`
+        ).join('');
+
+        card.innerHTML = `
+          <div class="gm-voice-header">
+            <span style="font-weight: bold; font-size: 1.1rem;">${escapeHtml(vName.toUpperCase())}</span>
+            <div>
+              <button onclick="openRenameVoiceModal('${vKey}', '${escapeHtml(vName)}')" style="font-size: 0.75rem; padding: 2px 6px;">RENAME</button>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; margin: 4px 0;">
+            <span class="sub-text">ENERGY: ${energyVal} | BID: ${vData.bidSubmitted ? vData.bid : 'NONE'}</span>
+            <div>
+              <button onclick="gmAdjustEnergy('${vKey}', -1)">-</button>
+              <button onclick="gmAdjustEnergy('${vKey}', 1)">+</button>
+            </div>
+          </div>
+
+          <div style="margin-top: 8px;">
+            <div class="sub-text" style="margin-bottom: 4px;">SPECIALTIES (${specsArr.length})</div>
+            ${specsHtml}
+            <div style="display: flex; gap: 6px; margin-top: 6px;">
+              <input type="text" id="gm-input-spec-${vKey}" placeholder="Add specialty..." style="flex:1; font-size: 0.85rem;">
+              <button onclick="gmAddItem('${vKey}', 'specialties')">+</button>
+            </div>
+          </div>
+
+          <div style="margin-top: 12px;">
+            <div class="sub-text" style="margin-bottom: 4px;">IMPULSES (${impsArr.length})</div>
+            ${impsHtml}
+            <div style="display: flex; gap: 6px; margin-top: 6px;">
+              <input type="text" id="gm-input-imp-${vKey}" placeholder="Add impulse..." style="flex:1; font-size: 0.85rem;">
+              <button onclick="gmAddItem('${vKey}', 'impulses')">+</button>
+            </div>
+          </div>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    function gmSetController() {
+      const selectedKey = document.getElementById('gm-active-controller-select').value;
+      
+      if (!selectedKey || selectedKey === 'NONE') {
+        db.ref().update({
+          controllerKey: 'NONE',
+          biddingActive: false
+        });
+        return;
+      }
+
+      const vData = (localData.voices && localData.voices[selectedKey]) || {};
+      const currentEnergy = vData.energy ?? 10;
+      const bidVal = (vData.bidSubmitted && vData.bid) ? vData.bid : 0;
+
+      // Automatically deduct submitted bid from player's Energy
+      const updatedEnergy = Math.max(0, currentEnergy - bidVal);
+
+      const updates = {};
+      updates['controllerKey'] = selectedKey;
+      updates['biddingActive'] = false; // Close bidding session
+      updates[`voices/${selectedKey}/energy`] = updatedEnergy;
+      updates[`voices/${selectedKey}/bid`] = 0;
+      updates[`voices/${selectedKey}/bidSubmitted`] = false;
+
+      db.ref().update(updates);
+    }
+
+    function gmPromptBids() {
+      const updates = { biddingActive: true };
+      if (localData.voices) {
+        Object.keys(localData.voices).forEach(vKey => {
+          updates[`voices/${vKey}/bidSubmitted`] = false;
+          updates[`voices/${vKey}/bid`] = 0;
+        });
+      }
+      db.ref().update(updates);
+    }
+
+    function gmCloseBids() {
+      db.ref('biddingActive').set(false);
+    }
+
+    function gmPromptD6() {
+      const activeKey = localData.controllerKey || 'NONE';
+      let targetKey = activeKey;
+      let targetName = "UNKNOWN";
+
+      if (targetKey === 'NONE') {
+        const voiceKeys = Object.keys(localData.voices || {});
+        if (voiceKeys.length > 0) {
+          targetKey = voiceKeys[0];
+        }
+      }
+
+      if (localData.voices && localData.voices[targetKey]) {
+        targetName = localData.voices[targetKey].name || targetKey;
+      }
+
+      db.ref('rollPrompt').set({
+        active: true,
+        targetVoiceKey: targetKey,
+        targetVoiceName: targetName,
+        result: null
+      });
+    }
+
+    function gmClearRollPrompt() {
+      db.ref('rollPrompt').set({
+        active: false,
+        targetVoiceKey: null,
+        targetVoiceName: null,
+        result: null
+      });
+    }
+
+    function gmAdjustEnergy(voiceKey, delta) {
+      db.ref(`voices/${voiceKey}/energy`).transaction(val => Math.max(0, (val ?? 10) + delta));
+    }
+
+    function gmAddItem(voiceKey, type) {
+      const input = document.getElementById(`gm-input-${type === 'specialties' ? 'spec' : 'imp'}-${voiceKey}`);
+      const val = input.value.trim();
+      if (!val) return;
+
+      const vData = localData.voices[voiceKey] || {};
+      const list = vData[type] || [];
+      list.push(val);
+
+      db.ref(`voices/${voiceKey}/${type}`).set(list);
+      input.value = '';
+    }
+
+    function gmRemoveItem(voiceKey, type, index) {
+      const vData = localData.voices[voiceKey] || {};
+      const list = vData[type] || [];
+      list.splice(index, 1);
+      db.ref(`voices/${voiceKey}/${type}`).set(list);
+    }
+
+    function openAddVoiceModal() {
+      voiceEditMode = 'ADD';
+      document.getElementById('voice-edit-title').innerText = "ADD NEW VOICE";
+      document.getElementById('voice-edit-input').value = '';
+      document.getElementById('voice-edit-modal').classList.add('visible');
+      setTimeout(() => document.getElementById('voice-edit-input').focus(), 100);
+    }
+
+    function openRenameVoiceModal(vKey, currentName) {
+      voiceEditMode = 'RENAME';
+      editingVoiceKey = vKey;
+      document.getElementById('voice-edit-title').innerText = "RENAME VOICE";
+      document.getElementById('voice-edit-input').value = currentName;
+      document.getElementById('voice-edit-modal').classList.add('visible');
+      setTimeout(() => document.getElementById('voice-edit-input').focus(), 100);
+    }
+
+    function closeVoiceEditModal() {
+      document.getElementById('voice-edit-modal').classList.remove('visible');
+    }
+
+    function saveVoiceEdit() {
+      const val = document.getElementById('voice-edit-input').value.trim();
+      if (!val) return;
+
+      if (voiceEditMode === 'ADD') {
+        const newKey = 'voice_' + Date.now();
+        db.ref(`voices/${newKey}`).set({
+          name: val,
+          energy: 10,
+          bid: 0,
+          bidSubmitted: false,
+          specialties: [],
+          impulses: []
+        });
+      } else if (voiceEditMode === 'RENAME' && editingVoiceKey) {
+        db.ref(`voices/${editingVoiceKey}/name`).set(val);
+      }
+
+      closeVoiceEditModal();
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
   </script>
 </body>
 </html>
