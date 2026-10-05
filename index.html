@@ -8,7 +8,7 @@
   <!-- Prevent 404 favicon error in dev console -->
   <link rel="icon" href="data:,">
 
-  <!-- Firebase v8 Compatibility SDKs (Realtime Database only, no Auth needed) -->
+  <!-- Firebase v8 Compatibility SDKs (Realtime Database) -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -34,7 +34,7 @@
       user-select: none;
     }
 
-    /* Target class for the hand-drawn wiggle effect on structural blocks */
+    /* Target class for hand-drawn wiggle effect on structural blocks */
     .wiggle {
       animation: squiggly-anim 0.36s step-end infinite;
       will-change: filter;
@@ -83,16 +83,76 @@
       margin-bottom: 24px;
     }
 
-    .header-role {
-      font-size: 0.95rem;
+    .header-left-col {
+      flex: 1;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    .header-center-col {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .header-right-col {
+      flex: 1;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      text-align: right;
+    }
+
+    /* Stability Meter Container in Top Left */
+    .stability-hud-container {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
+      min-width: 220px;
+    }
+
+    .stability-label-row {
+      font-size: 1.25rem;
+      font-weight: bold;
       letter-spacing: 2px;
       text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .stability-bar-track {
+      width: 140px;
+      height: 22px;
+      border: 2px solid #ffffff;
+      background: #000000;
+      padding: 2px;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    .stability-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: #ffffff;
+      transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), background-color 0.3s ease;
     }
 
     .header-energy {
       font-size: 1.25rem;
       font-weight: bold;
       letter-spacing: 2px;
+    }
+
+    .header-role {
+      font-size: 1.25rem;
+      font-weight: 900;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      transition: color 0.3s ease;
     }
 
     button {
@@ -105,6 +165,7 @@
       cursor: pointer;
       text-transform: uppercase;
       letter-spacing: 1px;
+      border: 1px solid #ffffff;
       transition: background-color 0.2s ease, color 0.2s ease;
     }
 
@@ -118,6 +179,7 @@
       cursor: not-allowed;
       background-color: #000000;
       color: #888888;
+      border-color: #555555;
     }
 
     input[type="text"], input[type="password"], select {
@@ -145,16 +207,23 @@
       visibility: visible;
     }
 
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
     .player-main-grid {
       display: grid;
       grid-template-columns: 1fr 1.2fr 1fr;
       gap: 32px;
-      align-items: center;
-      flex: 1;
+      align-items: center; /* Dead middle vertical alignment */
+      justify-content: center;
       width: 100%;
-      max-width: 1200px;
-      margin: 0 auto;
-      min-height: 60vh;
+      max-width: 1400px;
+      margin: auto;
     }
 
     @media (max-width: 850px) {
@@ -223,22 +292,21 @@
     .controller-center-box {
       text-align: center;
       padding: 20px 0;
-    }
-
-    .controller-label {
-      font-size: 0.95rem;
-      letter-spacing: 3px;
-      margin-bottom: 12px;
-      opacity: 0.85;
-      font-weight: bold;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
     }
 
     .controller-name {
-      font-size: 1.6rem;
+      font-size: clamp(0.9rem, 2.2vw, 1.4rem);
       font-weight: 900;
       letter-spacing: 2px;
       text-transform: uppercase;
-      line-height: 1.3;
+      line-height: 1.4;
+      transition: color 0.3s ease;
+      white-space: nowrap;
     }
 
     .modal-overlay {
@@ -262,8 +330,11 @@
 
     .modal-content {
       text-align: center;
-      max-width: 460px;
+      max-width: 480px;
       width: 100%;
+      border: 1px solid #ffffff;
+      padding: 24px;
+      background: #000000;
       transform: scale(0.95);
       transition: transform 0.3s ease;
     }
@@ -283,7 +354,7 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      max-height: 60vh;
+      max-height: 50vh;
       overflow-y: auto;
       padding-right: 4px;
     }
@@ -304,10 +375,21 @@
     }
 
     .d6-display-box {
-      font-size: 4.5rem;
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
       font-weight: bold;
-      margin: 20px 0;
-      letter-spacing: 4px;
+      margin: 16px 0 8px 0;
+      letter-spacing: 2px;
+      word-break: break-word;
+    }
+
+    .shared-roll-banner {
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 12px 16px;
+      border: 1px dashed #ffffff;
+      text-align: center;
+      background: #000000;
     }
 
     .gm-container {
@@ -326,6 +408,7 @@
       align-items: center;
       gap: 16px;
       padding-bottom: 20px;
+      border-bottom: 1px solid #333333;
     }
 
     .gm-voices-grid {
@@ -338,7 +421,9 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
-      padding: 16px 0;
+      padding: 16px;
+      border: 1px solid #444444;
+      background: #000000;
     }
 
     .gm-voice-header {
@@ -357,7 +442,7 @@
 
     .sub-text {
       font-size: 0.85rem;
-      opacity: 0.75;
+      opacity: 0.8;
       text-transform: uppercase;
       letter-spacing: 1px;
     }
@@ -376,5 +461,1347 @@
 </head>
 <body>
 
+  <!-- Hidden SVG filter definition block -->
+  <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style="position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none;" aria-hidden="true">
+    <defs>
+      <!-- Primary Wiggle Filter Set -->
+      <filter id="wiggle-0">
+        <feTurbulence type="turbulence" baseFrequency="0.012" numOctaves="1" result="noise" seed="0" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-1">
+        <feTurbulence type="turbulence" baseFrequency="0.012" numOctaves="1" result="noise" seed="15" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-2">
+        <feTurbulence type="turbulence" baseFrequency="0.012" numOctaves="1" result="noise" seed="30" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-3">
+        <feTurbulence type="turbulence" baseFrequency="0.012" numOctaves="1" result="noise" seed="45" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-4">
+        <feTurbulence type="turbulence" baseFrequency="0.012" numOctaves="1" result="noise" seed="60" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <!-- Secondary Alt Wiggle Filter Set -->
+      <filter id="wiggle-alt-0">
+        <feTurbulence type="turbulence" baseFrequency="0.018" numOctaves="1" result="noise" seed="101" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.6" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-alt-1">
+        <feTurbulence type="turbulence" baseFrequency="0.018" numOctaves="1" result="noise" seed="125" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.8" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-alt-2">
+        <feTurbulence type="turbulence" baseFrequency="0.015" numOctaves="1" result="noise" seed="149" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.4" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-alt-3">
+        <feTurbulence type="turbulence" baseFrequency="0.021" numOctaves="1" result="noise" seed="173" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.0" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <filter id="wiggle-alt-4">
+        <feTurbulence type="turbulence" baseFrequency="0.014" numOctaves="1" result="noise" seed="197" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.8" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- ROLE SELECTION MODAL -->
+  <div id="role-modal" class="modal-overlay visible">
+    <div class="modal-content wiggle">
+      <h2 class="modal-title">WHO ARE YOU?</h2>
+      <div id="role-buttons-container" class="role-buttons-list">
+        <!-- Voice buttons injected dynamically -->
+      </div>
+
+      <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 16px; display: flex; flex-direction: column; gap: 8px;">
+        <button onclick="promptGMPassword('GM (Shawn)', 'Morwenna')">[ GM (SHAWN) ]</button>
+        <button onclick="promptGMPassword('Co-DM (Carter)', 'Soriak')">[ CO-DM (CARTER) ]</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GM PASSWORD MODAL -->
+  <div id="password-modal" class="modal-overlay">
+    <div class="modal-content wiggle">
+      <h2 id="password-modal-title" class="modal-title">GM AUTHENTICATION</h2>
+      <p style="margin-bottom: 16px;" id="password-modal-sub">Enter password:</p>
+      <input type="password" id="gm-password-input" placeholder="Password..." style="width: 200px; text-align: center;" onkeydown="if(event.key==='Enter') submitGMPassword()">
+      <div style="margin-top: 20px; display: flex; justify-content: center; gap: 12px;">
+        <button onclick="submitGMPassword()">[ ENTER ]</button>
+        <button onclick="closePasswordModal()">[ CANCEL ]</button>
+      </div>
+      <div id="password-error-msg" class="error-msg hidden">ACCESS DENIED</div>
+    </div>
+  </div>
+
+  <!-- SECRET BIDDING MODAL -->
+  <div id="bidding-modal" class="modal-overlay">
+    <div class="modal-content wiggle">
+      <h2 class="modal-title">GM PROMPTED FOR BIDS</h2>
+      <div id="bidding-form-container">
+        <p style="margin-bottom: 12px; line-height: 1.5;">Choose Energy to bid for CONTROL</p>
+        
+        <div class="bid-stepper-container">
+          <button onclick="adjustBidStep(-1)">[ - ]</button>
+          <span id="bid-stepper-value" class="bid-value-display">0</span>
+          <button onclick="adjustBidStep(1)">[ + ]</button>
+        </div>
+
+        <button id="submit-bid-btn" onclick="handleBidSubmitClick()">[ SUBMIT BID ]</button>
+      </div>
+      <div id="bid-submitted-msg" class="hidden">
+        <p style="font-size: 1.1rem; letter-spacing: 2px;">BID SUBMITTED</p>
+        <p class="sub-text" style="margin-top: 10px;">Waiting for GM to resolve bidding...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- D6 ROLL MODAL FOR PLAYER -->
+  <div id="d6-modal" class="modal-overlay">
+    <div class="modal-content wiggle">
+      <h2 class="modal-title">GM PROMPTED A D6 ROLL</h2>
+      <p style="margin-bottom: 12px;">Roll to determine success:</p>
+      
+      <div id="d6-display-val" class="d6-display-box">?</div>
+      <div id="d6-breakdown-sub" class="sub-text hidden" style="font-size: 1rem; margin-bottom: 12px; opacity: 0.9;"></div>
+
+      <!-- D6 Boost Controls -->
+      <div id="d6-boost-container" style="margin: 16px 0; border-top: 1px dashed #444; border-bottom: 1px dashed #444; padding: 12px 0;">
+        <p class="sub-text" style="margin-bottom: 6px;">SPEND ENERGY FOR BOOST (+1 PER ENERGY):</p>
+        <div class="bid-stepper-container" style="margin: 8px 0;">
+          <button id="d6-boost-minus-btn" onclick="adjustD6BoostStep(-1)">[ - ]</button>
+          <span id="d6-boost-value" class="bid-value-display">0</span>
+          <button id="d6-boost-plus-btn" onclick="adjustD6BoostStep(1)">[ + ]</button>
+        </div>
+        <p id="d6-energy-remaining-text" class="sub-text" style="font-size: 0.8rem; opacity: 0.75;"></p>
+      </div>
+
+      <div id="d6-roll-action-box">
+        <button id="roll-d6-btn" onclick="executeD6Roll()">[ ROLL D6 ]</button>
+      </div>
+      <div id="d6-result-done-box" class="hidden">
+        <p class="sub-text">Roll synced to everyone. Waiting for GM...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- STABILITY 10 ASCENSION METAMORPHOSIS PROMPT FOR PLAYER -->
+  <div id="attunement-modal" class="modal-overlay">
+    <div class="modal-content wiggle">
+      <h2 class="modal-title" style="letter-spacing: 2px;">ATTUNING TO GREATER POWER</h2>
+      <p style="font-size: 1.05rem; line-height: 1.6; margin-bottom: 16px;">
+        You begin to attune to a greater power as you reach stability, losing control in your metamorphosis...
+      </p>
+      <p class="sub-text">Awaiting voice ascension confirmation from the GM...</p>
+    </div>
+  </div>
+
+  <!-- STABILITY 10 ASCENSION MODAL FOR GM -->
+  <div id="stability-modal" class="modal-overlay">
+    <div class="modal-content wiggle">
+      <h2 class="modal-title" style="color: #ffffff;">STABILITY MAXED (10/10)</h2>
+      <p class="sub-text" style="margin-bottom: 16px;">CONFIGURE ASCENDED VOICE DETAILS:</p>
+
+      <div style="display: flex; flex-direction: column; gap: 12px; text-align: left; margin-bottom: 20px;">
+        <div>
+          <label class="sub-text">NEW VOICE NAME:</label>
+          <input type="text" id="ascend-name-input" placeholder="Ascended Name..." style="width: 100%; margin-top: 4px;">
+        </div>
+
+        <div>
+          <label class="sub-text">CHOOSE UNIQUE COLOR:</label>
+          <div style="display: flex; gap: 10px; margin-top: 6px; align-items: center;">
+            <input type="color" id="ascend-color-input" value="#ffffff" style="border: none; background: transparent; width: 40px; height: 32px; cursor: pointer;">
+            <span id="color-preview-hex" style="font-size: 0.9rem; letter-spacing: 1px;">#FFFFFF</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="sub-text">SPECIALTIES (COMMA SEPARATED):</label>
+          <input type="text" id="ascend-specs-input" placeholder="e.g. Lockpicking, Stealth..." style="width: 100%; margin-top: 4px;">
+        </div>
+
+        <div>
+          <label class="sub-text">IMPULSES (COMMA SEPARATED):</label>
+          <input type="text" id="ascend-imps-input" placeholder="e.g. Eat trash, Sing aloud..." style="width: 100%; margin-top: 4px;">
+        </div>
+      </div>
+
+      <button onclick="saveAscendedVoiceDetails()">[ CONFIRM ASCENSION ]</button>
+    </div>
+  </div>
+
+  <!-- ADD / RENAME VOICE MODAL FOR GM -->
+  <div id="voice-edit-modal" class="modal-overlay">
+    <div class="modal-content wiggle">
+      <h2 id="voice-edit-title" class="modal-title">ADD NEW VOICE</h2>
+      <input type="text" id="voice-edit-input" placeholder="Voice Name..." style="width: 220px; text-align: center;" onkeydown="if(event.key==='Enter') saveVoiceEdit()">
+      <div style="margin-top: 20px; display: flex; justify-content: center; gap: 12px;">
+        <button onclick="saveVoiceEdit()">[ SAVE ]</button>
+        <button onclick="closeVoiceEditModal()">[ CANCEL ]</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANNEL SPECIALTIES CONFIRMATION MODAL -->
+  <div id="borrow-modal" class="modal-overlay">
+    <div class="modal-content wiggle">
+      <h2 class="modal-title">CHANNEL SPECIALTIES</h2>
+      <p id="borrow-modal-sub" style="margin-bottom: 12px; line-height: 1.5; font-size: 0.95rem;"></p>
+      <div id="borrow-modal-skills-list" style="margin-bottom: 20px; text-align: left; padding: 0 10px;"></div>
+      <div style="display: flex; justify-content: center; gap: 12px;">
+        <button onclick="confirmBorrowSkills()">[ CONFIRM (1 ENERGY) ]</button>
+        <button onclick="closeBorrowModal()">[ CANCEL ]</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP HUD -->
+  <header class="wiggle">
+    <!-- Top Left: Stability Meter & Label -->
+    <div class="header-left-col">
+      <div id="stability-hud" class="stability-hud-container hidden">
+        <div class="stability-label-row">
+          STABILITY
+        </div>
+        <div class="stability-bar-track">
+          <div id="stability-bar-fill" class="stability-bar-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Middle: Player Name / Role Display -->
+    <div class="header-center-col">
+      <div id="player-name-display" class="header-role hidden">
+        <span id="player-name-label">VOICE NAME</span>
+      </div>
+      <div id="gm-role-header-label" class="header-role hidden">
+        <span id="role-display-label">GM MODE</span>
+      </div>
+    </div>
+
+    <!-- Top Right: Energy -->
+    <div class="header-right-col">
+      <div id="player-agency-display" class="header-energy hidden">
+        ENERGY: <span id="my-agency-value">10</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- PLAYER VIEW -->
+    <div id="player-view-container" class="player-main-grid hidden">
+      
+      <!-- LEFT SIDE: SPECIALTIES & CHANNELABLE SPECIALTIES -->
+      <div id="mutations-section" class="specialties-container fade-section wiggle">
+        <h3 class="column-title">SPECIALTIES</h3>
+        <ul id="player-mutations-list" class="specialties-list"></ul>
+
+        <!-- CHANNELABLE SPECIALTIES SECTION (FROM STABILITY 10 VOICES) -->
+        <div id="borrowable-skills-container" class="hidden" style="margin-top: 28px; border-top: 1px dashed #555; padding-top: 16px;">
+          <h4 style="font-size: 0.9rem; letter-spacing: 2px; margin-bottom: 12px; text-transform: uppercase;">CHANNELABLE SPECIALTIES (1 ENERGY):</h4>
+          <div id="borrowable-skills-list"></div>
+        </div>
+      </div>
+
+      <!-- MIDDLE OF SCREEN: PLAYER IN CONTROL & ROLL INDICATOR -->
+      <div class="controller-center-box wiggle">
+        <div id="center-controller-name" class="controller-name">NO ONE IS CURRENTLY IN CONTROL</div>
+
+        <!-- SHARED PUBLIC D6 ROLL STATUS BANNER (CENTERED IN MIDDLE OF SCREEN) -->
+        <div id="shared-roll-banner" class="shared-roll-banner wiggle hidden">
+          <span id="roll-banner-text" style="letter-spacing: 2px;">PROMPTED: WAITING FOR VOICE TO ROLL D6...</span>
+          <button id="gm-clear-roll-btn" class="hidden" onclick="gmClearRoll()" style="margin-left: 16px; font-size: 0.75rem; padding: 2px 6px;">[ CLEAR ]</button>
+        </div>
+      </div>
+
+      <!-- RIGHT SIDE: IMPULSES -->
+      <div id="impulses-section" class="impulses-container fade-section wiggle">
+        <h3 class="column-title">IMPULSES</h3>
+        <ul id="player-impulses-list" class="impulses-list"></ul>
+      </div>
+
+    </div>
+
+    <!-- GM VIEW -->
+    <div id="gm-view-container" class="gm-container hidden">
+
+      <!-- GM SHARED ROLL BANNER IN GM VIEW -->
+      <div id="gm-shared-roll-banner" class="shared-roll-banner wiggle hidden">
+        <span id="gm-roll-banner-text" style="letter-spacing: 2px;">PROMPTED: WAITING FOR VOICE TO ROLL D6...</span>
+        <button onclick="gmClearRoll()" style="margin-left: 16px; font-size: 0.75rem; padding: 2px 6px;">[ CLEAR ]</button>
+      </div>
+
+      <div class="gm-control-panel wiggle">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <label style="font-size: 0.9rem;">CONTROL:</label>
+          <select id="gm-active-controller-select"></select>
+          <button onclick="gmSetController()">[ SET CONTROL ]</button>
+        </div>
+
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+          <button onclick="gmGiveUnattunedEnergy()">[ +1 UNATTUNED ENERGY ]</button>
+          <button onclick="gmPromptBids()">[ PROMPT FOR BIDS ]</button>
+          <button onclick="gmCloseBids()">[ CLOSE BIDS ]</button>
+          <button onclick="gmPromptD6()">[ PROMPT D6 ROLL ]</button>
+          <button onclick="openAddVoiceModal()">[ + ADD VOICE ]</button>
+        </div>
+      </div>
+
+      <div id="gm-voices-grid" class="gm-voices-grid"></div>
+
+    </div>
+
+  </main>
+
+  <script>
+    const firebaseConfig = {
+      databaseURL: "https://juni-karask-default-rtdb.firebaseio.com"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Generate unique client ID for occupancy tracking
+    const myClientId = 'client_' + Math.random().toString(36).substr(2, 9);
+
+    let activeRoleKey = null;   // e.g. 'voice_1' or 'GM'
+    let activeRoleName = null;  // e.g. 'Voice 1' or 'GM (Shawn)'
+    let isGM = false;
+
+    let pendingGMPargetRole = null;
+    let pendingGMPassword = null;
+
+    let voiceEditMode = 'ADD'; // 'ADD' or 'RENAME'
+    let editingVoiceKey = null;
+
+    let stabilityModalTargetKey = null;
+    let pendingBorrowTargetKey = null;
+
+    let localData = {
+      controllerKey: 'NONE',
+      biddingActive: false,
+      rollPrompt: { active: false, targetVoiceKey: null, targetVoiceName: null, result: null },
+      voices: {}
+    };
+
+    let currentBidValue = 0;
+    let currentD6BoostValue = 0;
+    let isConfirmingBid = false;
+    let isRollingLocal = false;
+
+    const defaultVoices = {
+      "voice_1": { name: "Voice 1", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
+      "voice_2": { name: "Voice 2", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
+      "voice_3": { name: "Voice 3", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
+      "voice_4": { name: "Voice 4", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
+      "voice_5": { name: "Voice 5", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] }
+    };
+
+    // Color picker synchronization
+    document.addEventListener('DOMContentLoaded', () => {
+      const colorInput = document.getElementById('ascend-color-input');
+      if (colorInput) {
+        colorInput.addEventListener('input', (e) => {
+          document.getElementById('color-preview-hex').innerText = e.target.value.toUpperCase();
+        });
+      }
+    });
+
+    db.ref().on('value', snapshot => {
+      localData = snapshot.val() || {};
+      if (!localData.voices || Object.keys(localData.voices).length === 0) {
+        db.ref('voices').set(defaultVoices);
+        localData.voices = defaultVoices;
+      }
+      syncViewWithData();
+      renderRoleSelectionModal();
+    });
+
+    function renderRoleSelectionModal() {
+      const container = document.getElementById('role-buttons-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const voices = localData.voices || {};
+      Object.keys(voices).forEach(vKey => {
+        const vData = voices[vKey] || {};
+        const vName = vData.name || vKey;
+        const occ = vData.occupiedBy;
+        const isOccupied = occ && occ !== myClientId;
+        const isAscended = (vData.stability ?? 0) >= 10 && vData.ascendedConfigured && vData.color;
+
+        const btn = document.createElement('button');
+        if (isOccupied) {
+          btn.innerText = `[ ${vName.toUpperCase()} - TAKEN ]`;
+          btn.disabled = true;
+        } else {
+          btn.innerText = `[ ${vName.toUpperCase()} ]`;
+          btn.onclick = () => choosePlayerRole(vKey, vName);
+        }
+
+        if (isAscended) {
+          btn.style.color = vData.color;
+          btn.style.borderColor = vData.color;
+        }
+
+        container.appendChild(btn);
+      });
+    }
+
+    function choosePlayerRole(vKey, vName) {
+      disconnectPresence();
+
+      activeRoleKey = vKey;
+      activeRoleName = vName;
+      isGM = false;
+
+      // Occupy voice in Firebase
+      db.ref(`voices/${vKey}/occupiedBy`).set(myClientId);
+      db.ref(`voices/${vKey}/occupiedBy`).onDisconnect().remove();
+
+      document.getElementById('role-modal').classList.remove('visible');
+
+      document.getElementById('gm-view-container').classList.add('hidden');
+      document.getElementById('gm-role-header-label').classList.add('hidden');
+      
+      document.getElementById('stability-hud').classList.remove('hidden');
+      document.getElementById('player-name-display').classList.remove('hidden');
+      document.getElementById('player-agency-display').classList.remove('hidden');
+      document.getElementById('player-view-container').classList.remove('hidden');
+
+      syncViewWithData();
+    }
+
+    function promptGMPassword(targetRoleName, password) {
+      pendingGMPargetRole = targetRoleName;
+      pendingGMPassword = password;
+      document.getElementById('password-modal-title').innerText = targetRoleName.toUpperCase();
+      document.getElementById('gm-password-input').value = '';
+      document.getElementById('password-error-msg').classList.add('hidden');
+      document.getElementById('password-modal').classList.add('visible');
+      setTimeout(() => document.getElementById('gm-password-input').focus(), 100);
+    }
+
+    function closePasswordModal() {
+      document.getElementById('password-modal').classList.remove('visible');
+    }
+
+    function submitGMPassword() {
+      const entered = document.getElementById('gm-password-input').value.trim();
+      if (entered.toLowerCase() === pendingGMPassword.toLowerCase()) {
+        disconnectPresence();
+
+        activeRoleKey = 'GM';
+        activeRoleName = pendingGMPargetRole;
+        isGM = true;
+
+        document.getElementById('password-modal').classList.remove('visible');
+        document.getElementById('role-modal').classList.remove('visible');
+        
+        document.getElementById('player-view-container').classList.add('hidden');
+        document.getElementById('stability-hud').classList.add('hidden');
+        document.getElementById('player-name-display').classList.add('hidden');
+        document.getElementById('player-agency-display').classList.add('hidden');
+        
+        document.getElementById('gm-role-header-label').classList.remove('hidden');
+        document.getElementById('role-display-label').innerText = activeRoleName.toUpperCase();
+        document.getElementById('gm-view-container').classList.remove('hidden');
+
+        syncViewWithData();
+      } else {
+        document.getElementById('password-error-msg').classList.remove('hidden');
+      }
+    }
+
+    function disconnectPresence() {
+      if (activeRoleKey && activeRoleKey !== 'GM') {
+        db.ref(`voices/${activeRoleKey}/occupiedBy`).remove();
+      }
+    }
+
+    function syncViewWithData() {
+      const rawControllerKey = localData.controllerKey || 'NONE';
+      const biddingActive = !!localData.biddingActive;
+      const rollPrompt = localData.rollPrompt || { active: false, targetVoiceKey: null, targetVoiceName: null, result: null };
+
+      // Update Center Controller Label safely with custom color support (No colon)
+      const centerLabel = document.getElementById('center-controller-name');
+      if (centerLabel) {
+        if (activeRoleKey && !isGM && rawControllerKey === activeRoleKey) {
+          centerLabel.innerText = "YOU ARE CURRENTLY IN CONTROL";
+          centerLabel.style.color = "#ffffff";
+        } else if (rawControllerKey !== 'NONE' && localData.voices && localData.voices[rawControllerKey]) {
+          const vData = localData.voices[rawControllerKey];
+          const vName = (vData && vData.name) ? vData.name : rawControllerKey;
+          const isAscended = vData && vData.stability >= 10 && vData.ascendedConfigured;
+          const vColor = (isAscended && vData.color) ? vData.color : '#ffffff';
+          centerLabel.innerText = `${vName.toUpperCase()} IS CURRENTLY IN CONTROL`;
+          centerLabel.style.color = vColor;
+        } else {
+          centerLabel.innerText = "NO ONE IS CURRENTLY IN CONTROL";
+          centerLabel.style.color = "#ffffff";
+        }
+      }
+
+      renderRollBanner(rollPrompt);
+
+      if (!activeRoleKey) return;
+
+      if (isGM) {
+        renderGMScreen(rollPrompt);
+      } else {
+        renderPlayerScreen(biddingActive, rollPrompt);
+      }
+    }
+
+    function renderRollBanner(rollPrompt) {
+      const banner = document.getElementById('shared-roll-banner');
+      const textEl = document.getElementById('roll-banner-text');
+      const clearBtn = document.getElementById('gm-clear-roll-btn');
+
+      const gmBanner = document.getElementById('gm-shared-roll-banner');
+      const gmTextEl = document.getElementById('gm-roll-banner-text');
+
+      if (!rollPrompt || !rollPrompt.active) {
+        if (banner) banner.classList.add('hidden');
+        if (gmBanner) gmBanner.classList.add('hidden');
+        return;
+      }
+
+      if (banner) banner.classList.remove('hidden');
+      if (gmBanner) gmBanner.classList.remove('hidden');
+
+      const tName = rollPrompt.targetVoiceName ? rollPrompt.targetVoiceName.toUpperCase() : 'A VOICE';
+
+      let statusMsg = '';
+      if (rollPrompt.result !== null && rollPrompt.result !== undefined) {
+        statusMsg = `${tName} ROLLED: ${rollPrompt.result}!`;
+      } else if (isRollingLocal && rollPrompt.targetVoiceKey === activeRoleKey) {
+        statusMsg = `${tName} IS ROLLING THE D6...`;
+      } else {
+        statusMsg = `PROMPTED: WAITING FOR ${tName} TO ROLL A D6...`;
+      }
+
+      if (textEl) textEl.innerText = statusMsg;
+      if (gmTextEl) gmTextEl.innerText = statusMsg;
+
+      if (isGM) {
+        if (clearBtn) clearBtn.classList.remove('hidden');
+      } else {
+        if (clearBtn) clearBtn.classList.add('hidden');
+      }
+    }
+
+    function renderPlayerScreen(biddingActive, rollPrompt) {
+      const vData = (localData.voices && localData.voices[activeRoleKey]) || { energy: 10, stability: 0, color: '#ffffff', bid: 0, specialties: [], impulses: [] };
+      const currentEnergy = vData.energy ?? 10;
+      const currentStability = Math.min(10, Math.max(0, vData.stability ?? 0));
+
+      const isAscended = currentStability >= 10 && vData.ascendedConfigured;
+      const displayColor = (isAscended && vData.color) ? vData.color : '#ffffff';
+
+      // Update Top-Middle Player Name Header with custom color & ascended name
+      const nameLabel = document.getElementById('player-name-label');
+      if (nameLabel) {
+        const currentName = vData.name || activeRoleName || '';
+        nameLabel.innerText = currentName.toUpperCase();
+        nameLabel.style.color = displayColor;
+      }
+
+      document.getElementById('my-agency-value').innerText = currentEnergy;
+
+      // Update Stability Meter Bar Fill
+      const barFill = document.getElementById('stability-bar-fill');
+      if (barFill) {
+        barFill.style.width = `${(currentStability / 10) * 100}%`;
+        barFill.style.backgroundColor = displayColor;
+      }
+
+      // Handle Attunement / Metamorphosis Modal overlay for players at Stability 10 before ascension is confirmed
+      const attunementModal = document.getElementById('attunement-modal');
+      if (attunementModal) {
+        if (currentStability >= 10 && !vData.ascendedConfigured) {
+          attunementModal.classList.add('visible');
+        } else {
+          attunementModal.classList.remove('visible');
+        }
+      }
+
+      // Render Specialties (Left Center)
+      const specialtiesList = document.getElementById('player-mutations-list');
+      specialtiesList.innerHTML = '';
+      const specsArr = vData.specialties || [];
+      const borrowedArr = vData.borrowedSpecialties || [];
+      
+      // Render own specialties
+      specsArr.forEach(spec => {
+        const li = document.createElement('li');
+        li.innerText = spec;
+        if (isAscended && vData.color) {
+          li.style.color = vData.color;
+        }
+        specialtiesList.appendChild(li);
+      });
+
+      // Render channeled specialties in their original owner's color
+      borrowedArr.forEach(bSpec => {
+        const li = document.createElement('li');
+        const specName = typeof bSpec === 'object' ? bSpec.name : bSpec;
+        li.innerText = specName;
+        if (typeof bSpec === 'object' && bSpec.color) {
+          li.style.color = bSpec.color;
+        }
+        specialtiesList.appendChild(li);
+      });
+
+      const specialtiesSection = document.getElementById('mutations-section');
+      if (specsArr.length > 0 || borrowedArr.length > 0) {
+        specialtiesSection.classList.add('visible');
+      } else {
+        specialtiesSection.classList.remove('visible');
+      }
+
+      // Render Channelable Specialties if Currently in Control
+      renderBorrowableSkills();
+
+      // Render Impulses (Right Center)
+      const impulsesList = document.getElementById('player-impulses-list');
+      impulsesList.innerHTML = '';
+      const impulsesArr = vData.impulses || [];
+
+      impulsesArr.forEach(imp => {
+        const li = document.createElement('li');
+        li.innerText = imp;
+        if (isAscended && vData.color) {
+          li.style.color = vData.color;
+        }
+        impulsesList.appendChild(li);
+      });
+
+      const impulsesSection = document.getElementById('impulses-section');
+      if (impulsesArr.length > 0) {
+        impulsesSection.classList.add('visible');
+      } else {
+        impulsesSection.classList.remove('visible');
+      }
+
+      // Handle Secret Bidding Modal
+      const biddingModal = document.getElementById('bidding-modal');
+      if (biddingActive) {
+        biddingModal.classList.add('visible');
+        if (vData.bidSubmitted) {
+          document.getElementById('bidding-form-container').classList.add('hidden');
+          document.getElementById('bid-submitted-msg').classList.remove('hidden');
+        } else {
+          document.getElementById('bidding-form-container').classList.remove('hidden');
+          document.getElementById('bid-submitted-msg').classList.add('hidden');
+        }
+      } else {
+        biddingModal.classList.remove('visible');
+        currentBidValue = 0;
+        resetSubmitButton();
+        updateStepperDisplay();
+      }
+
+      // Handle D6 Roll Prompt Modal for Player
+      const d6Modal = document.getElementById('d6-modal');
+      const boostContainer = document.getElementById('d6-boost-container');
+      const breakdownSubEl = document.getElementById('d6-breakdown-sub');
+      const isTargetForRoll = rollPrompt.active && rollPrompt.targetVoiceKey === activeRoleKey;
+
+      if (isTargetForRoll) {
+        d6Modal.classList.add('visible');
+        if (rollPrompt.result !== null && rollPrompt.result !== undefined && !isRollingLocal) {
+          // Separate main value from breakdown string for roller's display
+          const rawRes = String(rollPrompt.result);
+          const firstSpace = rawRes.indexOf(' ');
+          if (firstSpace !== -1) {
+            document.getElementById('d6-display-val').innerText = rawRes.substring(0, firstSpace);
+            if (breakdownSubEl) {
+              breakdownSubEl.innerText = rawRes.substring(firstSpace + 1);
+              breakdownSubEl.classList.remove('hidden');
+            }
+          } else {
+            document.getElementById('d6-display-val').innerText = rawRes;
+            if (breakdownSubEl) {
+              breakdownSubEl.innerText = '';
+              breakdownSubEl.classList.add('hidden');
+            }
+          }
+
+          document.getElementById('d6-roll-action-box').classList.add('hidden');
+          if (boostContainer) boostContainer.classList.add('hidden');
+          document.getElementById('d6-result-done-box').classList.remove('hidden');
+        } else if (!isRollingLocal) {
+          if (!d6Modal.classList.contains('was-open')) {
+            currentD6BoostValue = 0; // Reset on fresh prompt
+            if (breakdownSubEl) {
+              breakdownSubEl.innerText = '';
+              breakdownSubEl.classList.add('hidden');
+            }
+          }
+          d6Modal.classList.add('was-open');
+
+          document.getElementById('d6-display-val').innerText = '?';
+          document.getElementById('d6-roll-action-box').classList.remove('hidden');
+          if (boostContainer) boostContainer.classList.remove('hidden');
+          document.getElementById('d6-result-done-box').classList.add('hidden');
+          updateD6BoostDisplay();
+        }
+      } else {
+        d6Modal.classList.remove('visible');
+        d6Modal.classList.remove('was-open');
+        currentD6BoostValue = 0;
+        if (breakdownSubEl) {
+          breakdownSubEl.innerText = '';
+          breakdownSubEl.classList.add('hidden');
+        }
+      }
+    }
+
+    function renderBorrowableSkills() {
+      const container = document.getElementById('borrowable-skills-container');
+      const listEl = document.getElementById('borrowable-skills-list');
+      if (!container || !listEl) return;
+
+      const isInControl = localData.controllerKey === activeRoleKey;
+      if (!isInControl) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      const voices = localData.voices || {};
+      const myData = voices[activeRoleKey] || {};
+      const myBorrowed = myData.borrowedSpecialties || [];
+
+      listEl.innerHTML = '';
+      let count = 0;
+
+      Object.keys(voices).forEach(vKey => {
+        if (vKey === activeRoleKey) return; // Skip own voice
+        const vData = voices[vKey] || {};
+        if ((vData.stability ?? 0) >= 10 && vData.ascendedConfigured) {
+          const vColor = vData.color || '#ffffff';
+          const vName = vData.name || vKey;
+          const specs = vData.specialties || [];
+
+          if (specs.length > 0) {
+            count++;
+            const vBlock = document.createElement('div');
+            vBlock.style.marginBottom = '16px';
+
+            const headerRow = document.createElement('div');
+            headerRow.style.display = 'flex';
+            headerRow.style.justifyContent = 'space-between';
+            headerRow.style.alignItems = 'center';
+            headerRow.style.marginBottom = '6px';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.style.color = vColor;
+            nameSpan.style.fontWeight = 'bold';
+            nameSpan.style.fontSize = '0.95rem';
+            nameSpan.innerText = `${vName.toUpperCase()}:`;
+
+            // Check if player has already channeled specialties from this ascended plane
+            const hasBorrowedFromPlane = myBorrowed.some(b => (typeof b === 'object' && b.ownerKey === vKey) || (typeof b === 'object' && b.color === vColor));
+
+            headerRow.appendChild(nameSpan);
+
+            // Only append Channel button if the player hasn't already channeled from this ascended plane
+            if (!hasBorrowedFromPlane) {
+              const borrowBtn = document.createElement('button');
+              borrowBtn.style.fontSize = '0.75rem';
+              borrowBtn.style.padding = '2px 8px';
+              borrowBtn.style.borderColor = vColor;
+              borrowBtn.style.color = vColor;
+              borrowBtn.innerText = '[ CHANNEL ]';
+              borrowBtn.onclick = () => openBorrowModal(vKey, vName, vColor, specs);
+              headerRow.appendChild(borrowBtn);
+            }
+
+            vBlock.appendChild(headerRow);
+
+            specs.forEach(spec => {
+              const specRow = document.createElement('div');
+              specRow.style.color = vColor;
+              specRow.style.fontSize = '0.85rem';
+              specRow.style.paddingLeft = '8px';
+              specRow.style.marginTop = '2px';
+              specRow.innerText = `• ${spec}`;
+              vBlock.appendChild(specRow);
+            });
+
+            listEl.appendChild(vBlock);
+          }
+        }
+      });
+
+      if (count > 0) {
+        container.classList.remove('hidden');
+      } else {
+        container.classList.add('hidden');
+      }
+    }
+
+    function openBorrowModal(ownerVoiceKey, ownerName, ownerColor, specs) {
+      pendingBorrowTargetKey = ownerVoiceKey;
+      
+      const subEl = document.getElementById('borrow-modal-sub');
+      subEl.innerText = `Spend 1 Energy to channel ${ownerName.toUpperCase()}'s specialties? (1 Energy will be paid to ${ownerName.toUpperCase()}).`;
+
+      const listEl = document.getElementById('borrow-modal-skills-list');
+      listEl.innerHTML = '';
+      
+      specs.forEach(s => {
+        const item = document.createElement('div');
+        item.style.color = ownerColor;
+        item.style.fontSize = '0.95rem';
+        item.style.fontWeight = 'bold';
+        item.style.marginTop = '4px';
+        item.innerText = `• ${s}`;
+        listEl.appendChild(item);
+      });
+
+      document.getElementById('borrow-modal').classList.add('visible');
+    }
+
+    function closeBorrowModal() {
+      pendingBorrowTargetKey = null;
+      document.getElementById('borrow-modal').classList.remove('visible');
+    }
+
+    function confirmBorrowSkills() {
+      if (!pendingBorrowTargetKey || localData.controllerKey !== activeRoleKey) return;
+
+      const myData = (localData.voices && localData.voices[activeRoleKey]) || {};
+      const myEnergy = myData.energy ?? 10;
+
+      if (myEnergy < 1) {
+        alert("Not enough Energy to channel specialties!");
+        closeBorrowModal();
+        return;
+      }
+
+      const targetData = (localData.voices && localData.voices[pendingBorrowTargetKey]) || {};
+      const targetSpecs = targetData.specialties || [];
+      const targetColor = targetData.color || '#ffffff';
+      const targetEnergy = targetData.energy ?? 10;
+
+      let myBorrowed = myData.borrowedSpecialties || [];
+
+      // Add specialties from target player if not already channeled
+      targetSpecs.forEach(spec => {
+        const exists = myBorrowed.some(b => (typeof b === 'object' ? b.name : b) === spec);
+        if (!exists) {
+          myBorrowed.push({
+            name: spec,
+            color: targetColor,
+            ownerKey: pendingBorrowTargetKey
+          });
+        }
+      });
+
+      // Transfer 1 Energy from channeler to specialty owner
+      const updates = {};
+      updates[`voices/${activeRoleKey}/energy`] = Math.max(0, myEnergy - 1);
+      updates[`voices/${activeRoleKey}/borrowedSpecialties`] = myBorrowed;
+      updates[`voices/${pendingBorrowTargetKey}/energy`] = targetEnergy + 1;
+
+      db.ref().update(updates);
+
+      closeBorrowModal();
+    }
+
+    function promptStabilityAscension(vKey, vData) {
+      stabilityModalTargetKey = vKey;
+      document.getElementById('ascend-name-input').value = vData.name || '';
+      document.getElementById('ascend-color-input').value = vData.color || '#ffffff';
+      document.getElementById('color-preview-hex').innerText = (vData.color || '#FFFFFF').toUpperCase();
+      document.getElementById('ascend-specs-input').value = (vData.specialties || []).join(', ');
+      document.getElementById('ascend-imps-input').value = (vData.impulses || []).join(', ');
+
+      document.getElementById('stability-modal').classList.add('visible');
+    }
+
+    function saveAscendedVoiceDetails() {
+      if (!stabilityModalTargetKey) return;
+
+      const newName = document.getElementById('ascend-name-input').value.trim() || 'Ascended Voice';
+      const newColor = document.getElementById('ascend-color-input').value || '#ffffff';
+      
+      const specsRaw = document.getElementById('ascend-specs-input').value;
+      const impsRaw = document.getElementById('ascend-imps-input').value;
+
+      const specsArr = specsRaw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      const impsArr = impsRaw.split(',').map(i => i.trim()).filter(i => i.length > 0);
+
+      db.ref(`voices/${stabilityModalTargetKey}`).update({
+        name: newName,
+        color: newColor,
+        specialties: specsArr,
+        impulses: impsArr,
+        ascendedConfigured: true
+      });
+
+      document.getElementById('stability-modal').classList.remove('visible');
+    }
+
+    function gmResetVoice(voiceKey, currentName) {
+      const newName = prompt("Enter new player/voice name:", currentName);
+      if (newName === null) return; // Cancelled by GM
+
+      const trimmedName = newName.trim();
+      if (!trimmedName) return;
+
+      db.ref(`voices/${voiceKey}`).update({
+        name: trimmedName,
+        color: '#ffffff',
+        stability: 0,
+        ascendedConfigured: false,
+        specialties: [],
+        impulses: [],
+        borrowedSpecialties: []
+      });
+    }
+
+    function adjustBidStep(delta) {
+      const vData = (localData.voices && localData.voices[activeRoleKey]) || { energy: 10 };
+      const maxEnergy = vData.energy ?? 10;
+
+      currentBidValue += delta;
+      if (currentBidValue < 0) currentBidValue = 0;
+      if (currentBidValue > maxEnergy) currentBidValue = maxEnergy;
+
+      updateStepperDisplay();
+      resetSubmitButton();
+    }
+
+    function updateStepperDisplay() {
+      document.getElementById('bid-stepper-value').innerText = currentBidValue;
+    }
+
+    function resetSubmitButton() {
+      isConfirmingBid = false;
+      const btn = document.getElementById('submit-bid-btn');
+      btn.innerText = "[ SUBMIT BID ]";
+      btn.style.backgroundColor = "#000000";
+      btn.style.color = "#ffffff";
+    }
+
+    function handleBidSubmitClick() {
+      const btn = document.getElementById('submit-bid-btn');
+      if (!isConfirmingBid) {
+        isConfirmingBid = true;
+        btn.innerText = "[ CONFIRM? ]";
+        btn.style.backgroundColor = "#ffffff";
+        btn.style.color = "#000000";
+      } else {
+        submitBid(currentBidValue);
+      }
+    }
+
+    function submitBid(bidVal) {
+      db.ref(`voices/${activeRoleKey}`).update({
+        bid: bidVal,
+        bidSubmitted: true
+      });
+    }
+
+    function adjustD6BoostStep(delta) {
+      const vData = (localData.voices && localData.voices[activeRoleKey]) || { energy: 10 };
+      const maxEnergy = vData.energy ?? 10;
+
+      currentD6BoostValue += delta;
+      if (currentD6BoostValue < 0) currentD6BoostValue = 0;
+      if (currentD6BoostValue > maxEnergy) currentD6BoostValue = maxEnergy;
+
+      updateD6BoostDisplay();
+    }
+
+    function updateD6BoostDisplay() {
+      const boostValEl = document.getElementById('d6-boost-value');
+      if (boostValEl) boostValEl.innerText = currentD6BoostValue;
+
+      const vData = (localData.voices && localData.voices[activeRoleKey]) || { energy: 10 };
+      const currentEnergy = vData.energy ?? 10;
+      const remText = document.getElementById('d6-energy-remaining-text');
+      if (remText) {
+        remText.innerText = `AVAILABLE ENERGY: ${currentEnergy} (REMAINING AFTER BOOST: ${currentEnergy - currentD6BoostValue})`;
+      }
+    }
+
+    function executeD6Roll() {
+      if (isRollingLocal) return;
+      isRollingLocal = true;
+
+      const btn = document.getElementById('roll-d6-btn');
+      btn.disabled = true;
+
+      const minusBtn = document.getElementById('d6-boost-minus-btn');
+      const plusBtn = document.getElementById('d6-boost-plus-btn');
+      if (minusBtn) minusBtn.disabled = true;
+      if (plusBtn) plusBtn.disabled = true;
+
+      const displayEl = document.getElementById('d6-display-val');
+      const breakdownSubEl = document.getElementById('d6-breakdown-sub');
+      let ticks = 0;
+
+      const interval = setInterval(() => {
+        displayEl.innerText = Math.floor(Math.random() * 6) + 1;
+        ticks++;
+        if (ticks > 15) {
+          clearInterval(interval);
+          const finalBase = Math.floor(Math.random() * 6) + 1;
+          const totalResult = finalBase + currentD6BoostValue;
+
+          // Deduct spent boost energy from player in Firebase
+          const vData = (localData.voices && localData.voices[activeRoleKey]) || { energy: 10 };
+          const currentEnergy = vData.energy ?? 10;
+          if (currentD6BoostValue > 0) {
+            const newEnergy = Math.max(0, currentEnergy - currentD6BoostValue);
+            db.ref(`voices/${activeRoleKey}/energy`).set(newEnergy);
+          }
+
+          const breakdownString = currentD6BoostValue > 0 
+            ? `(${finalBase} base + ${currentD6BoostValue} boost)` 
+            : '';
+
+          const fullResultString = currentD6BoostValue > 0 
+            ? `${totalResult} ${breakdownString}`
+            : `${totalResult}`;
+
+          // Local display: main total in box, breakdown string in subtitle
+          displayEl.innerText = `${totalResult}`;
+          if (breakdownSubEl) {
+            if (breakdownString) {
+              breakdownSubEl.innerText = breakdownString;
+              breakdownSubEl.classList.remove('hidden');
+            } else {
+              breakdownSubEl.innerText = '';
+              breakdownSubEl.classList.add('hidden');
+            }
+          }
+
+          db.ref('rollPrompt').update({
+            result: fullResultString
+          });
+
+          isRollingLocal = false;
+          btn.disabled = false;
+          if (minusBtn) minusBtn.disabled = false;
+          if (plusBtn) plusBtn.disabled = false;
+          syncViewWithData();
+        }
+      }, 80);
+    }
+
+    function renderGMScreen(rollPrompt) {
+      const selectEl = document.getElementById('gm-active-controller-select');
+      const currentSelectedVal = selectEl.value;
+      selectEl.innerHTML = '<option value="NONE">NONE</option>';
+
+      const voices = localData.voices || {};
+      Object.keys(voices).forEach(vKey => {
+        const vData = voices[vKey] || {};
+        const vName = vData.name || vKey;
+        const opt = document.createElement('option');
+        opt.value = vKey;
+        opt.innerText = vName;
+        selectEl.appendChild(opt);
+      });
+      selectEl.value = localData.controllerKey || currentSelectedVal || 'NONE';
+
+      // Render GM Voices Grid
+      const grid = document.getElementById('gm-voices-grid');
+      grid.innerHTML = '';
+
+      Object.keys(voices).forEach(vKey => {
+        const vData = voices[vKey] || {};
+        const vName = vData.name || vKey;
+        const energyVal = vData.energy ?? 10;
+        const stabilityVal = vData.stability ?? 0;
+        const isAscended = stabilityVal >= 10 && vData.ascendedConfigured;
+        const vColor = (isAscended && vData.color) ? vData.color : '#ffffff';
+
+        const specsArr = vData.specialties || [];
+        const borrowedArr = vData.borrowedSpecialties || [];
+        const impsArr = vData.impulses || [];
+
+        const card = document.createElement('div');
+        card.className = 'gm-voice-card wiggle';
+
+        const specsHtml = specsArr.map((s, idx) => 
+          `<div class="item-row"><span style="color: ${vColor};">• ${escapeHtml(s)}</span><button onclick="gmRemoveItem('${vKey}', 'specialties', ${idx})">×</button></div>`
+        ).join('');
+
+        const borrowedHtml = borrowedArr.map((b, idx) => {
+          const bName = typeof b === 'object' ? b.name : b;
+          const bColor = (typeof b === 'object' && b.color) ? b.color : '#ffffff';
+          return `<div class="item-row"><span style="color: ${bColor};">• ${escapeHtml(bName)} (CHANNELED)</span><button onclick="gmRemoveItem('${vKey}', 'borrowedSpecialties', ${idx})">×</button></div>`;
+        }).join('');
+
+        const impsHtml = impsArr.map((i, idx) => 
+          `<div class="item-row"><span style="color: ${vColor};">• ${escapeHtml(i)}</span><button onclick="gmRemoveItem('${vKey}', 'impulses', ${idx})">×</button></div>`
+        ).join('');
+
+        card.innerHTML = `
+          <div class="gm-voice-header">
+            <span style="font-weight: bold; font-size: 1.1rem; color: ${vColor};">${escapeHtml(vName.toUpperCase())}</span>
+            <div>
+              <button onclick="openRenameVoiceModal('${vKey}', '${escapeHtml(vName)}')" style="font-size: 0.75rem; padding: 2px 6px;">RENAME</button>
+              ${stabilityVal >= 10 ? `<button onclick="gmResetVoice('${vKey}', '${escapeHtml(vName)}')" style="font-size: 0.75rem; padding: 2px 6px; color: ${vColor}; border-color:${vColor}; margin-left: 4px;">RESET</button>` : ''}
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; margin: 4px 0;">
+            <span class="sub-text">ENERGY: ${energyVal} | BID: ${vData.bidSubmitted ? vData.bid : 'NONE'}</span>
+            <div>
+              <button onclick="gmAdjustEnergy('${vKey}', -1)">-</button>
+              <button onclick="gmAdjustEnergy('${vKey}', 1)">+</button>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; margin: 4px 0;">
+            <span class="sub-text" style="color: ${isAscended ? vColor : 'inherit'};">STABILITY: ${stabilityVal}/10</span>
+            <div>
+              <button onclick="gmAdjustStability('${vKey}', -1)">-</button>
+              <button onclick="gmAdjustStability('${vKey}', 1)">+</button>
+            </div>
+          </div>
+
+          <div style="margin-top: 8px;">
+            <div class="sub-text" style="margin-bottom: 4px;">SPECIALTIES (${specsArr.length + borrowedArr.length})</div>
+            ${specsHtml}
+            ${borrowedHtml}
+            <div style="display: flex; gap: 6px; margin-top: 6px;">
+              <input type="text" id="gm-input-spec-${vKey}" placeholder="Add specialty..." style="flex:1; font-size: 0.85rem;">
+              <button onclick="gmAddItem('${vKey}', 'specialties')">+</button>
+            </div>
+          </div>
+
+          <div style="margin-top: 12px;">
+            <div class="sub-text" style="margin-bottom: 4px;">IMPULSES (${impsArr.length})</div>
+            ${impsHtml}
+            <div style="display: flex; gap: 6px; margin-top: 6px;">
+              <input type="text" id="gm-input-imp-${vKey}" placeholder="Add impulse..." style="flex:1; font-size: 0.85rem;">
+              <button onclick="gmAddItem('${vKey}', 'impulses')">+</button>
+            </div>
+          </div>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    function gmSetController() {
+      const selectedKey = document.getElementById('gm-active-controller-select').value;
+      
+      // Clear channeled specialties across all voices when helm control changes
+      if (localData.voices) {
+        Object.keys(localData.voices).forEach(vKey => {
+          if (localData.voices[vKey].borrowedSpecialties) {
+            db.ref(`voices/${vKey}/borrowedSpecialties`).remove();
+          }
+        });
+      }
+
+      if (selectedKey === 'NONE') {
+        // If set to NONE: prompt everyone to make new bids automatically instead of an empty screen
+        const voices = localData.voices || {};
+        const updates = {};
+        Object.keys(voices).forEach(vKey => {
+          updates[`voices/${vKey}/bid`] = 0;
+          updates[`voices/${vKey}/bidSubmitted`] = false;
+        });
+        updates['biddingActive'] = true;
+        updates['controllerKey'] = 'NONE';
+
+        db.ref().update(updates);
+      } else {
+        // If setting a valid player controller:
+        // Automatically deduct their submitted bid energy, reset their bid, and close bidding automatically
+        const vData = (localData.voices && localData.voices[selectedKey]) || {};
+        const currentEnergy = vData.energy ?? 10;
+        const bidVal = vData.bidSubmitted ? (vData.bid ?? 0) : 0;
+        const newEnergy = Math.max(0, currentEnergy - bidVal);
+
+        const updates = {};
+        updates[`voices/${selectedKey}/energy`] = newEnergy;
+        updates[`voices/${selectedKey}/bid`] = 0;
+        updates[`voices/${selectedKey}/bidSubmitted`] = false;
+        updates['controllerKey'] = selectedKey;
+        updates['biddingActive'] = false; // Close bidding automatically
+
+        db.ref().update(updates);
+      }
+    }
+
+    function gmGiveUnattunedEnergy() {
+      const voices = localData.voices || {};
+      const controllerKey = localData.controllerKey || 'NONE';
+      const updates = {};
+      Object.keys(voices).forEach(vKey => {
+        const vData = voices[vKey] || {};
+        const stabilityVal = vData.stability ?? 0;
+        // Grant +1 energy to unattuned players (stability < 10) who are NOT controlling the helm
+        if (stabilityVal < 10 && vKey !== controllerKey) {
+          updates[`voices/${vKey}/energy`] = (vData.energy ?? 10) + 1;
+        }
+      });
+      if (Object.keys(updates).length > 0) {
+        db.ref().update(updates);
+      }
+    }
+
+    function gmPromptBids() {
+      const voices = localData.voices || {};
+      const updates = {};
+      Object.keys(voices).forEach(vKey => {
+        updates[`voices/${vKey}/bid`] = 0;
+        updates[`voices/${vKey}/bidSubmitted`] = false;
+      });
+      updates['biddingActive'] = true;
+
+      db.ref().update(updates);
+    }
+
+    function gmCloseBids() {
+      db.ref('biddingActive').set(false);
+    }
+
+    function gmPromptD6() {
+      const currentControlKey = localData.controllerKey;
+      if (!currentControlKey || currentControlKey === 'NONE') {
+        alert("Select an active Voice controller first before prompting a D6 roll!");
+        return;
+      }
+
+      const vData = localData.voices[currentControlKey] || {};
+      const vName = vData.name || currentControlKey;
+
+      db.ref('rollPrompt').set({
+        active: true,
+        targetVoiceKey: currentControlKey,
+        targetVoiceName: vName,
+        result: null
+      });
+    }
+
+    function gmClearRoll() {
+      db.ref('rollPrompt').set({
+        active: false,
+        targetVoiceKey: null,
+        targetVoiceName: null,
+        result: null
+      });
+    }
+
+    function gmAdjustStability(voiceKey, delta) {
+      db.ref(`voices/${voiceKey}`).transaction(vData => {
+        if (!vData) vData = { energy: 10, stability: 0 };
+        const oldStab = vData.stability ?? 0;
+        const newStab = Math.max(0, Math.min(10, oldStab + delta));
+        vData.stability = newStab;
+        if (newStab < 10) {
+          vData.ascendedConfigured = false;
+        }
+        return vData;
+      }, (error, committed, snapshot) => {
+        if (committed && snapshot) {
+          const val = snapshot.val();
+          if (val && val.stability === 10 && !val.ascendedConfigured && isGM) {
+            promptStabilityAscension(voiceKey, val);
+          }
+        }
+      });
+    }
+
+    function gmAdjustEnergy(voiceKey, delta) {
+      db.ref(`voices/${voiceKey}/energy`).transaction(val => Math.max(0, (val ?? 10) + delta));
+    }
+
+    function gmAddItem(voiceKey, type) {
+      const input = document.getElementById(`gm-input-${type === 'specialties' ? 'spec' : 'imp'}-${voiceKey}`);
+      const val = input.value.trim();
+      if (!val) return;
+
+      const vData = localData.voices[voiceKey] || {};
+      const list = vData[type] || [];
+      list.push(val);
+
+      db.ref(`voices/${voiceKey}/${type}`).set(list);
+      input.value = '';
+    }
+
+    function gmRemoveItem(voiceKey, type, index) {
+      const vData = localData.voices[voiceKey] || {};
+      const list = vData[type] || [];
+      list.splice(index, 1);
+      db.ref(`voices/${voiceKey}/${type}`).set(list);
+    }
+
+    function openAddVoiceModal() {
+      voiceEditMode = 'ADD';
+      document.getElementById('voice-edit-title').innerText = "ADD NEW VOICE";
+      document.getElementById('voice-edit-input').value = '';
+      document.getElementById('voice-edit-modal').classList.add('visible');
+      setTimeout(() => document.getElementById('voice-edit-input').focus(), 100);
+    }
+
+    function openRenameVoiceModal(vKey, currentName) {
+      voiceEditMode = 'RENAME';
+      editingVoiceKey = vKey;
+      document.getElementById('voice-edit-title').innerText = "RENAME VOICE";
+      document.getElementById('voice-edit-input').value = currentName;
+      document.getElementById('voice-edit-modal').classList.add('visible');
+      setTimeout(() => document.getElementById('voice-edit-input').focus(), 100);
+    }
+
+    function closeVoiceEditModal() {
+      document.getElementById('voice-edit-modal').classList.remove('visible');
+    }
+
+    function saveVoiceEdit() {
+      const val = document.getElementById('voice-edit-input').value.trim();
+      if (!val) return;
+
+      if (voiceEditMode === 'ADD') {
+        const newKey = 'voice_' + Date.now();
+        db.ref(`voices/${newKey}`).set({
+          name: val,
+          energy: 10,
+          stability: 0,
+          color: '#ffffff',
+          bid: 0,
+          bidSubmitted: false,
+          specialties: [],
+          impulses: []
+        });
+      } else if (voiceEditMode === 'RENAME' && editingVoiceKey) {
+        db.ref(`voices/${editingVoiceKey}/name`).set(val);
+      }
+
+      closeVoiceEditModal();
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+  </script>
 </body>
 </html>
