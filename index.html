@@ -195,6 +195,7 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             border: 1px solid #ffffff;
+            white-space: nowrap;
             transition: background-color 0.2s ease, color 0.2s ease;
         }
 
@@ -480,6 +481,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 8px;
         }
 
         .sidebar-title {
@@ -487,6 +489,7 @@
             letter-spacing: 1.5px;
             text-transform: uppercase;
             font-weight: bold;
+            white-space: nowrap;
         }
 
         .folder-container {
@@ -714,8 +717,8 @@
 
             <div
                 style="margin-top: 20px; border-top: 1px solid #333; padding-top: 16px; display: flex; flex-direction: column; gap: 8px;">
-                <button onclick="promptGMPassword('GM (Shawn)', 'Morwenna0nT0p!')">[ GM (SHAWN) ]</button>
-                <button onclick="promptGMPassword('Co-DM (Carter)', 'Soriak0nT0p!')">[ CO-DM (CARTER) ]</button>
+                <button onclick="promptGMPassword('GM (Shawn)', 'Morwenna0nT0p!')">[GM (SHAWN)]</button>
+                <button onclick="promptGMPassword('Co-DM (Carter)', 'Soriak0nT0p!')">[CO-DM (CARTER)]</button>
             </div>
         </div>
     </div>
@@ -728,8 +731,8 @@
             <input type="password" id="gm-password-input" placeholder="Password..."
                 style="width: 200px; text-align: center;" onkeydown="if(event.key==='Enter') submitGMPassword()">
             <div style="margin-top: 20px; display: flex; justify-content: center; gap: 12px;">
-                <button onclick="submitGMPassword()">[ ENTER ]</button>
-                <button onclick="closePasswordModal()">[ CANCEL ]</button>
+                <button onclick="submitGMPassword()">[ENTER]</button>
+                <button onclick="closePasswordModal()">[CANCEL]</button>
             </div>
             <div id="password-error-msg" class="error-msg hidden">ACCESS DENIED</div>
         </div>
@@ -743,12 +746,12 @@
                 <p style="margin-bottom: 12px; line-height: 1.5;">Choose Energy to bid for CONTROL</p>
 
                 <div class="bid-stepper-container">
-                    <button onclick="adjustBidStep(-1)">[ - ]</button>
+                    <button onclick="adjustBidStep(-1)">[-]</button>
                     <span id="bid-stepper-value" class="bid-value-display">0</span>
-                    <button onclick="adjustBidStep(1)">[ + ]</button>
+                    <button onclick="adjustBidStep(1)">[+]</button>
                 </div>
 
-                <button id="submit-bid-btn" onclick="handleBidSubmitClick()">[ SUBMIT BID ]</button>
+                <button id="submit-bid-btn" onclick="handleBidSubmitClick()">[SUBMIT BID]</button>
             </div>
             <div id="bid-submitted-msg" class="hidden">
                 <p style="font-size: 1.1rem; letter-spacing: 2px;">BID SUBMITTED</p>
@@ -772,15 +775,15 @@
                 style="margin: 16px 0; border-top: 1px dashed #444; border-bottom: 1px dashed #444; padding: 12px 0;">
                 <p class="sub-text" style="margin-bottom: 6px;">SPEND ENERGY FOR BOOST (+1 PER ENERGY):</p>
                 <div class="bid-stepper-container" style="margin: 8px 0;">
-                    <button id="d6-boost-minus-btn" onclick="adjustD6BoostStep(-1)">[ - ]</button>
+                    <button id="d6-boost-minus-btn" onclick="adjustD6BoostStep(-1)">[-]</button>
                     <span id="d6-boost-value" class="bid-value-display">0</span>
-                    <button id="d6-boost-plus-btn" onclick="adjustD6BoostStep(1)">[ + ]</button>
+                    <button id="d6-boost-plus-btn" onclick="adjustD6BoostStep(1)">[+]</button>
                 </div>
                 <p id="d6-energy-remaining-text" class="sub-text" style="font-size: 0.8rem; opacity: 0.75;"></p>
             </div>
 
             <div id="d6-roll-action-box">
-                <button id="roll-d6-btn" onclick="executeD6Roll()">[ ROLL D6 ]</button>
+                <button id="roll-d6-btn" onclick="executeD6Roll()">[ROLL D6]</button>
             </div>
             <div id="d6-result-done-box" class="hidden">
                 <p class="sub-text">Roll synced to everyone. Waiting for GM...</p>
@@ -834,7 +837,7 @@
                 </div>
             </div>
 
-            <button onclick="saveAscendedVoiceDetails()">[ CONFIRM ASCENSION ]</button>
+            <button onclick="saveAscendedVoiceDetails()">[CONFIRM ASCENSION]</button>
         </div>
     </div>
 
@@ -845,8 +848,8 @@
             <input type="text" id="voice-edit-input" placeholder="Voice Name..."
                 style="width: 220px; text-align: center;" onkeydown="if(event.key==='Enter') saveVoiceEdit()">
             <div style="margin-top: 20px; display: flex; justify-content: center; gap: 12px;">
-                <button onclick="saveVoiceEdit()">[ SAVE ]</button>
-                <button onclick="closeVoiceEditModal()">[ CANCEL ]</button>
+                <button onclick="saveVoiceEdit()">[SAVE]</button>
+                <button onclick="closeVoiceEditModal()">[CANCEL]</button>
             </div>
         </div>
     </div>
@@ -858,8 +861,8 @@
             <p id="borrow-modal-sub" style="margin-bottom: 12px; line-height: 1.5; font-size: 0.95rem;"></p>
             <div id="borrow-modal-skills-list" style="margin-bottom: 20px; text-align: left; padding: 0 10px;"></div>
             <div style="display: flex; justify-content: center; gap: 12px;">
-                <button onclick="confirmBorrowSkills()">[ CONFIRM (1 ENERGY) ]</button>
-                <button onclick="closeBorrowModal()">[ CANCEL ]</button>
+                <button onclick="confirmBorrowSkills()">[CONFIRM (1 ENERGY)]</button>
+                <button onclick="closeBorrowModal()">[CANCEL]</button>
             </div>
         </div>
     </div>
@@ -924,7 +927,7 @@
                     <span id="roll-banner-text" style="letter-spacing: 2px;">PROMPTED: WAITING FOR VOICE TO ROLL
                         D6...</span>
                     <button id="gm-clear-roll-btn" class="hidden" onclick="gmClearRoll()"
-                        style="margin-left: 16px; font-size: 0.75rem; padding: 2px 6px;">[ CLEAR ]</button>
+                        style="margin-left: 16px; font-size: 0.75rem; padding: 2px 6px;">[CLEAR]</button>
                 </div>
             </div>
 
@@ -943,11 +946,11 @@
             <div id="gm-spec-sidebar" class="gm-sidebar gm-sidebar-left wiggle">
                 <div class="sidebar-header">
                     <h3 class="sidebar-title">SUGGESTED SPECIALTIES</h3>
-                    <button id="edit-specs-btn" onclick="toggleEditSpecs()" style="font-size: 0.75rem; padding: 2px 6px;">[ EDIT ]</button>
+                    <button id="edit-specs-btn" onclick="toggleEditSpecs()" style="font-size: 0.75rem; padding: 2px 6px;">[EDIT]</button>
                 </div>
                 <div id="suggested-specs-container" class="folder-container"></div>
                 <div id="spec-add-folder-box" class="add-folder-box hidden">
-                    <button onclick="gmAddFolder('specialties')">[ + NEW FOLDER ]</button>
+                    <button onclick="gmAddFolder('specialties')">[+ NEW FOLDER]</button>
                 </div>
             </div>
 
@@ -957,23 +960,22 @@
                 <div id="gm-shared-roll-banner" class="shared-roll-banner wiggle hidden">
                     <span id="gm-roll-banner-text" style="letter-spacing: 2px;">PROMPTED: WAITING FOR VOICE TO ROLL
                         D6...</span>
-                    <button onclick="gmClearRoll()" style="margin-left: 16px; font-size: 0.75rem; padding: 2px 6px;">[ CLEAR
-                        ]</button>
+                    <button onclick="gmClearRoll()" style="margin-left: 16px; font-size: 0.75rem; padding: 2px 6px;">[CLEAR]</button>
                 </div>
 
                 <div class="gm-control-panel wiggle">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <label style="font-size: 0.9rem;">CONTROL:</label>
                         <select id="gm-active-controller-select"></select>
-                        <button onclick="gmSetController()">[ SET CONTROL ]</button>
+                        <button onclick="gmSetController()">[SET CONTROL]</button>
                     </div>
 
                     <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
-                        <button onclick="gmGiveUnattunedEnergy()">[ +1 UNATTUNED ENERGY ]</button>
-                        <button onclick="gmPromptBids()">[ PROMPT FOR BIDS ]</button>
-                        <button onclick="gmCloseBids()">[ CLOSE BIDS ]</button>
-                        <button onclick="gmPromptD6()">[ PROMPT D6 ROLL ]</button>
-                        <button onclick="openAddVoiceModal()">[ + ADD VOICE ]</button>
+                        <button onclick="gmGiveUnattunedEnergy()">[+1 UNATTUNED ENERGY]</button>
+                        <button onclick="gmPromptBids()">[PROMPT FOR BIDS]</button>
+                        <button onclick="gmCloseBids()">[CLOSE BIDS]</button>
+                        <button onclick="gmPromptD6()">[PROMPT D6 ROLL]</button>
+                        <button onclick="openAddVoiceModal()">[+ ADD VOICE]</button>
                     </div>
                 </div>
 
@@ -984,11 +986,11 @@
             <div id="gm-imp-sidebar" class="gm-sidebar gm-sidebar-right wiggle">
                 <div class="sidebar-header">
                     <h3 class="sidebar-title">SUGGESTED IMPULSES</h3>
-                    <button id="edit-imps-btn" onclick="toggleEditImps()" style="font-size: 0.75rem; padding: 2px 6px;">[ EDIT ]</button>
+                    <button id="edit-imps-btn" onclick="toggleEditImps()" style="font-size: 0.75rem; padding: 2px 6px;">[EDIT]</button>
                 </div>
                 <div id="suggested-imps-container" class="folder-container"></div>
                 <div id="imp-add-folder-box" class="add-folder-box hidden">
-                    <button onclick="gmAddFolder('impulses')">[ + NEW FOLDER ]</button>
+                    <button onclick="gmAddFolder('impulses')">[+ NEW FOLDER]</button>
                 </div>
             </div>
 
@@ -1106,10 +1108,10 @@
 
                 const btn = document.createElement('button');
                 if (isOccupied) {
-                    btn.innerText = `[ ${vName.toUpperCase()} - TAKEN ]`;
+                    btn.innerText = `[${vName.toUpperCase()} - TAKEN]`;
                     btn.disabled = true;
                 } else {
-                    btn.innerText = `[ ${vName.toUpperCase()} ]`;
+                    btn.innerText = `[${vName.toUpperCase()}]`;
                     btn.onclick = () => choosePlayerRole(vKey, vName);
                 }
 
@@ -1479,7 +1481,7 @@
                             borrowBtn.style.padding = '2px 8px';
                             borrowBtn.style.borderColor = vColor;
                             borrowBtn.style.color = vColor;
-                            borrowBtn.innerText = '[ CHANNEL ]';
+                            borrowBtn.innerText = '[CHANNEL]';
                             borrowBtn.onclick = () => openBorrowModal(vKey, vName, vColor, specs);
                             headerRow.appendChild(borrowBtn);
                         }
@@ -1646,7 +1648,7 @@
         function resetSubmitButton() {
             isConfirmingBid = false;
             const btn = document.getElementById('submit-bid-btn');
-            btn.innerText = "[ SUBMIT BID ]";
+            btn.innerText = "[SUBMIT BID]";
             btn.style.backgroundColor = "#000000";
             btn.style.color = "#ffffff";
         }
@@ -1655,7 +1657,7 @@
             const btn = document.getElementById('submit-bid-btn');
             if (!isConfirmingBid) {
                 isConfirmingBid = true;
-                btn.innerText = "[ CONFIRM? ]";
+                btn.innerText = "[CONFIRM?]";
                 btn.style.backgroundColor = "#ffffff";
                 btn.style.color = "#000000";
             } else {
@@ -1886,10 +1888,10 @@
             const btnSpec = document.getElementById('edit-specs-btn');
             if (btnSpec) {
                 if (isEditingSpecs) {
-                    btnSpec.innerText = "[ DONE ]";
+                    btnSpec.innerText = "[DONE]";
                     btnSpec.classList.add('toggle-edit-active');
                 } else {
-                    btnSpec.innerText = "[ EDIT ]";
+                    btnSpec.innerText = "[EDIT]";
                     btnSpec.classList.remove('toggle-edit-active');
                 }
             }
@@ -1897,10 +1899,10 @@
             const btnImp = document.getElementById('edit-imps-btn');
             if (btnImp) {
                 if (isEditingImps) {
-                    btnImp.innerText = "[ DONE ]";
+                    btnImp.innerText = "[DONE]";
                     btnImp.classList.add('toggle-edit-active');
                 } else {
-                    btnImp.innerText = "[ EDIT ]";
+                    btnImp.innerText = "[EDIT]";
                     btnImp.classList.remove('toggle-edit-active');
                 }
             }
