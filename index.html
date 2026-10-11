@@ -222,6 +222,7 @@
             padding: 6px 10px;
             border-bottom: 1px solid #ffffff;
             border-radius: 0;
+            user-select: text;
         }
 
         select {
@@ -442,7 +443,7 @@
             position: fixed;
             top: 90px;
             bottom: 24px;
-            width: 300px;
+            width: 310px;
             z-index: 200;
             border: 1px solid #444444;
             background: #000000;
@@ -557,6 +558,19 @@
 
         .suggested-item[draggable="true"]:active {
             cursor: grabbing;
+        }
+
+        .hex-input-box {
+            width: 68px;
+            font-size: 0.75rem;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 1px 3px;
+            text-transform: uppercase;
+            text-align: center;
+            background: #000000;
+            color: #ffffff;
+            border: 1px solid #555555;
+            user-select: text;
         }
 
         .add-folder-box {
@@ -820,7 +834,8 @@
                     <div style="display: flex; gap: 10px; margin-top: 6px; align-items: center;">
                         <input type="color" id="ascend-color-input" value="#ffffff"
                             style="border: none; background: transparent; width: 40px; height: 32px; cursor: pointer;">
-                        <span id="color-preview-hex" style="font-size: 0.9rem; letter-spacing: 1px;">#FFFFFF</span>
+                        <input type="text" id="ascend-color-hex" value="#FFFFFF" class="hex-input-box" style="width: 90px; height: 32px; font-size: 0.9rem;"
+                            onchange="syncAscendColorFromHex(this.value)">
                     </div>
                 </div>
 
@@ -1022,10 +1037,10 @@
         let stabilityModalTargetKey = null;
         let pendingBorrowTargetKey = null;
 
-        // GM Suggestions Editing & Folder State
+        // GM Suggestions Editing & Folder State (Folders start collapsed by default)
         let isEditingSpecs = false;
         let isEditingImps = false;
-        let collapsedFolders = new Set();
+        let expandedFolders = new Set();
 
         let localData = {
             controllerKey: 'NONE',
@@ -1065,15 +1080,25 @@
             { id: "fold_general_imp", name: "General Impulses", color: "#ffffff", items: ["Touch strange magic artifacts", "Speak in ominous riddles", "Eat whatever is nearby"] }
         ];
 
-        // Color picker synchronization
+        // Color picker synchronization in Ascension Modal
         document.addEventListener('DOMContentLoaded', () => {
             const colorInput = document.getElementById('ascend-color-input');
-            if (colorInput) {
+            const hexInput = document.getElementById('ascend-color-hex');
+            if (colorInput && hexInput) {
                 colorInput.addEventListener('input', (e) => {
-                    document.getElementById('color-preview-hex').innerText = e.target.value.toUpperCase();
+                    hexInput.value = e.target.value.toUpperCase();
                 });
             }
         });
+
+        function syncAscendColorFromHex(rawVal) {
+            let val = rawVal.trim();
+            if (!val.startsWith('#')) val = '#' + val;
+            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                document.getElementById('ascend-color-input').value = val;
+                document.getElementById('ascend-color-hex').value = val.toUpperCase();
+            }
+        }
 
         db.ref().on('value', snapshot => {
             localData = snapshot.val() || {};
@@ -1579,9 +1604,10 @@
 
         function promptStabilityAscension(vKey, vData) {
             stabilityModalTargetKey = vKey;
+            const initColor = vData.color || '#ffffff';
             document.getElementById('ascend-name-input').value = vData.name || '';
-            document.getElementById('ascend-color-input').value = vData.color || '#ffffff';
-            document.getElementById('color-preview-hex').innerText = (vData.color || '#FFFFFF').toUpperCase();
+            document.getElementById('ascend-color-input').value = initColor;
+            document.getElementById('ascend-color-hex').value = initColor.toUpperCase();
             document.getElementById('ascend-specs-input').value = (vData.specialties || []).join(', ');
             document.getElementById('ascend-imps-input').value = (vData.impulses || []).join(', ');
 
@@ -1930,7 +1956,9 @@
                 const folderName = folder.name || 'UNNAMED FOLDER';
                 const folderColor = folder.color || '#ffffff';
                 const items = Array.isArray(folder.items) ? folder.items : (folder.items ? Object.values(folder.items) : []);
-                const isCollapsed = collapsedFolders.has(folderId);
+                
+                // All options start COLLAPSED by default (unless expanded explicitly)
+                const isExpanded = expandedFolders.has(folderId);
 
                 const folderCard = document.createElement('div');
                 folderCard.className = 'folder-card';
@@ -1945,12 +1973,12 @@
                 const titleSpan = document.createElement('span');
                 titleSpan.className = 'folder-name';
                 titleSpan.style.color = folderColor;
-                titleSpan.innerText = `${isCollapsed ? '►' : '▼'} ${folderName} (${items.length})`;
+                titleSpan.innerText = `${isExpanded ? '▼' : '►'} ${folderName} (${items.length})`;
                 titleSpan.onclick = () => {
-                    if (collapsedFolders.has(folderId)) {
-                        collapsedFolders.delete(folderId);
+                    if (expandedFolders.has(folderId)) {
+                        expandedFolders.delete(folderId);
                     } else {
-                        collapsedFolders.add(folderId);
+                        expandedFolders.add(folderId);
                     }
                     renderSuggestions();
                 };
@@ -1960,13 +1988,13 @@
                 if (isEditing) {
                     const actionGroup = document.createElement('div');
                     actionGroup.style.display = 'flex';
-                    actionGroup.style.gap = '4px';
+                    actionGroup.style.gap = '3px';
                     actionGroup.style.alignItems = 'center';
 
                     // Reorder Up Arrow Button
                     const upBtn = document.createElement('button');
                     upBtn.style.fontSize = '0.7rem';
-                    upBtn.style.padding = '1px 4px';
+                    upBtn.style.padding = '1px 3px';
                     upBtn.innerText = '▲';
                     upBtn.disabled = folderIdx === 0;
                     upBtn.onclick = (e) => {
@@ -1977,7 +2005,7 @@
                     // Reorder Down Arrow Button
                     const downBtn = document.createElement('button');
                     downBtn.style.fontSize = '0.7rem';
-                    downBtn.style.padding = '1px 4px';
+                    downBtn.style.padding = '1px 3px';
                     downBtn.innerText = '▼';
                     downBtn.disabled = folderIdx === folders.length - 1;
                     downBtn.onclick = (e) => {
@@ -1985,23 +2013,63 @@
                         gmMoveFolder(category, folderIdx, 1);
                     };
 
-                    // Group Color Picker
+                    // Group Color Picker Container with Editable/Copyable Hex Text Field
+                    const colorContainer = document.createElement('div');
+                    colorContainer.style.display = 'flex';
+                    colorContainer.style.alignItems = 'center';
+                    colorContainer.style.gap = '2px';
+
                     const colorPicker = document.createElement('input');
                     colorPicker.type = 'color';
                     colorPicker.value = folderColor;
-                    colorPicker.style.width = '24px';
-                    colorPicker.style.height = '20px';
+                    colorPicker.style.width = '20px';
+                    colorPicker.style.height = '18px';
                     colorPicker.style.border = 'none';
                     colorPicker.style.background = 'transparent';
                     colorPicker.style.cursor = 'pointer';
-                    colorPicker.title = 'Choose Group Color';
+                    colorPicker.title = 'Choose Color';
+
+                    const hexInput = document.createElement('input');
+                    hexInput.type = 'text';
+                    hexInput.className = 'hex-input-box';
+                    hexInput.value = folderColor.toUpperCase();
+                    hexInput.title = 'Copy/Paste Hex Color Code';
+                    hexInput.onclick = (e) => e.stopPropagation();
+
+                    // Sync text input to color swatch & Firebase on change/blur
+                    const applyHexChange = (e) => {
+                        let val = hexInput.value.trim();
+                        if (!val.startsWith('#')) val = '#' + val;
+                        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                            colorPicker.value = val;
+                            gmSetFolderColor(category, folderIdx, val);
+                        } else {
+                            hexInput.value = colorPicker.value.toUpperCase();
+                        }
+                    };
+
+                    hexInput.onchange = applyHexChange;
+                    hexInput.onblur = applyHexChange;
+                    hexInput.onkeydown = (e) => {
+                        if (e.key === 'Enter') {
+                            applyHexChange(e);
+                            hexInput.blur();
+                        }
+                    };
+
+                    colorPicker.oninput = (e) => {
+                        hexInput.value = e.target.value.toUpperCase();
+                    };
                     colorPicker.onchange = (e) => {
                         gmSetFolderColor(category, folderIdx, e.target.value);
                     };
 
+                    colorContainer.appendChild(colorPicker);
+                    colorContainer.appendChild(hexInput);
+
                     const renameBtn = document.createElement('button');
                     renameBtn.style.fontSize = '0.7rem';
-                    renameBtn.style.padding = '1px 4px';
+                    renameBtn.style.padding = '1px 3px';
                     renameBtn.innerText = 'R';
                     renameBtn.title = 'Rename Folder';
                     renameBtn.onclick = (e) => {
@@ -2011,7 +2079,7 @@
 
                     const delFolderBtn = document.createElement('button');
                     delFolderBtn.style.fontSize = '0.7rem';
-                    delFolderBtn.style.padding = '1px 4px';
+                    delFolderBtn.style.padding = '1px 3px';
                     delFolderBtn.innerText = '×';
                     delFolderBtn.title = 'Delete Folder';
                     delFolderBtn.onclick = (e) => {
@@ -2021,7 +2089,7 @@
 
                     actionGroup.appendChild(upBtn);
                     actionGroup.appendChild(downBtn);
-                    actionGroup.appendChild(colorPicker);
+                    actionGroup.appendChild(colorContainer);
                     actionGroup.appendChild(renameBtn);
                     actionGroup.appendChild(delFolderBtn);
                     folderHeader.appendChild(actionGroup);
@@ -2029,8 +2097,8 @@
 
                 folderCard.appendChild(folderHeader);
 
-                // Folder Items List
-                if (!isCollapsed) {
+                // Folder Items List (only rendered if expanded)
+                if (isExpanded) {
                     const itemsList = document.createElement('div');
                     itemsList.className = 'folder-items-list';
 
