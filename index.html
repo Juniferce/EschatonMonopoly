@@ -104,6 +104,114 @@
             }
         }
 
+        /* MONOCHROME HEAVY DISTORTION & LINE-NOISE ARTIFACTS */
+        .glitch-container {
+            position: relative;
+            display: inline-block;
+            vertical-align: bottom;
+        }
+
+        .glitch-active {
+            animation: heavy-distortion 0.45s steps(2, start) infinite;
+            position: relative;
+        }
+
+        .glitch-active::before,
+        .glitch-active::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.95;
+            pointer-events: none;
+            color: #ffffff;
+        }
+
+        .glitch-active::before {
+            left: 2px;
+            text-shadow: 0 0 4px #ffffff;
+            clip-path: inset(10% 0 40% 0);
+            filter: blur(0.8px) contrast(200%);
+            animation: distortion-slice-1 0.22s infinite linear alternate-reverse;
+        }
+
+        .glitch-active::after {
+            left: -2px;
+            text-shadow: -1px 0 2px #ffffff;
+            clip-path: inset(50% 0 10% 0);
+            filter: contrast(300%);
+            animation: distortion-slice-2 0.18s infinite linear alternate-reverse;
+        }
+
+        /* Floating digital line-noise artifacts around text */
+        .glitch-active .artifact-left,
+        .glitch-active .artifact-right {
+            display: inline-block !important;
+        }
+
+        .artifact-left {
+            display: none;
+            position: absolute;
+            right: 102%;
+            top: -2px;
+            font-size: 0.85em;
+            color: #ffffff;
+            text-shadow: 0 0 6px #ffffff;
+            animation: artifact-rumble-left 0.12s infinite alternate;
+            pointer-events: none;
+        }
+
+        .artifact-right {
+            display: none;
+            position: absolute;
+            left: 102%;
+            bottom: -2px;
+            font-size: 0.85em;
+            color: #ffffff;
+            text-shadow: 0 0 6px #ffffff;
+            animation: artifact-rumble-right 0.15s infinite alternate;
+            pointer-events: none;
+        }
+
+        @keyframes heavy-distortion {
+            0% { transform: skew(0deg) scale(1); filter: none; }
+            15% { transform: skew(-22deg) scaleX(1.25) translate(-5px, 2px); filter: contrast(250%); }
+            30% { transform: skew(18deg) scaleY(0.75) scaleX(0.85) translate(6px, -4px); filter: blur(1.2px); }
+            45% { transform: skew(-15deg) scaleX(1.3) translate(-4px, -2px); }
+            60% { transform: skew(25deg) scaleY(1.25) translate(5px, 3px); filter: contrast(300%); }
+            75% { transform: skew(-10deg) scaleX(0.9) translate(-3px, 1px); }
+            90% { transform: skew(12deg) scaleX(1.1) translate(4px, -1px); filter: blur(0.6px); }
+            100% { transform: skew(0deg) scale(1); filter: none; }
+        }
+
+        @keyframes distortion-slice-1 {
+            0% { clip-path: inset(5% 0 75% 0); transform: translate(-10px, 2px) scaleX(1.3); }
+            25% { clip-path: inset(65% 0 10% 0); transform: translate(8px, -3px) scaleX(0.8); }
+            50% { clip-path: inset(25% 0 35% 0); transform: translate(-6px, 4px) scaleY(1.4); }
+            75% { clip-path: inset(80% 0 5% 0); transform: translate(9px, -2px) scaleX(1.15); }
+            100% { clip-path: inset(15% 0 50% 0); transform: translate(-5px, 1px) scaleX(0.85); }
+        }
+
+        @keyframes distortion-slice-2 {
+            0% { clip-path: inset(70% 0 10% 0); transform: translate(10px, -4px) scaleY(0.6); }
+            25% { clip-path: inset(12% 0 60% 0); transform: translate(-9px, 3px) scaleX(1.35); }
+            50% { clip-path: inset(40% 0 20% 0); transform: translate(7px, -2px) scaleX(0.75); }
+            75% { clip-path: inset(8% 0 75% 0); transform: translate(-8px, 1px) scaleY(1.3); }
+            100% { clip-path: inset(50% 0 15% 0); transform: translate(6px, -1px) scaleX(1.2); }
+        }
+
+        @keyframes artifact-rumble-left {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(-8px, -4px) scale(1.3); opacity: 0.3; }
+        }
+
+        @keyframes artifact-rumble-right {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(8px, 4px) scale(1.3); opacity: 0.3; }
+        }
+
         header {
             display: flex;
             justify-content: space-between;
@@ -182,6 +290,9 @@
             text-transform: uppercase;
             white-space: nowrap;
             transition: color 0.3s ease;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
         }
 
         button {
@@ -321,7 +432,7 @@
             font-weight: bold;
         }
 
-        /* Dead Center Controller Box */
+        /* Dead Center Controller Box with Stationary Alignment Anchor */
         .controller-center-box {
             text-align: center;
             padding: 20px 0;
@@ -330,15 +441,38 @@
             align-items: center;
             justify-content: center;
             gap: 20px;
+            width: 100%;
         }
 
-        .controller-name {
+        .controller-name-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
             font-size: clamp(0.9rem, 2.2vw, 1.4rem);
             font-weight: 900;
             letter-spacing: 2px;
             text-transform: uppercase;
             line-height: 1.4;
             transition: color 0.3s ease;
+        }
+
+        .controller-left-side {
+            flex: 1;
+            text-align: right;
+            padding-right: 8px;
+            white-space: nowrap;
+        }
+
+        .controller-right-side {
+            flex: 1;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .controller-single-center {
+            width: 100%;
+            text-align: center;
             white-space: nowrap;
         }
 
@@ -584,14 +718,14 @@
             flex-wrap: wrap;
             justify-content: center;
             align-items: center;
-            gap: 16px;
+            gap: 12px 16px;
             padding-bottom: 20px;
             border-bottom: 1px solid #333333;
         }
 
         .gm-voices-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 28px;
         }
 
@@ -611,10 +745,29 @@
             background: #111111 !important;
         }
 
+        /* GM Card Header & Button Formatting Fix */
         .gm-voice-header {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+            flex-wrap: wrap;
+            border-bottom: 1px dashed #333333;
+            padding-bottom: 8px;
+        }
+
+        .gm-card-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
             align-items: center;
+            justify-content: flex-end;
+        }
+
+        .gm-sm-btn {
+            font-size: 0.7rem !important;
+            padding: 3px 6px !important;
+            letter-spacing: 0.5px;
         }
 
         .item-row {
@@ -731,7 +884,6 @@
 
             <div
                 style="margin-top: 20px; border-top: 1px solid #333; padding-top: 16px; display: flex; flex-direction: column; gap: 8px;">
-                <!--<button onclick="promptGMPassword('GM (Shawn)', 'Morwenna0nT0p!')">[GM (SHAWN)]</button>-->
                 <button onclick="promptGMPassword('Co-DM (Carter)', 'Soriak0nT0p!')">[CO-DM (CARTER)]</button>
             </div>
         </div>
@@ -869,6 +1021,19 @@
         </div>
     </div>
 
+    <!-- TRUE NAME MODAL FOR GM -->
+    <div id="true-name-modal" class="modal-overlay">
+        <div class="modal-content wiggle">
+            <h2 class="modal-title">SET TRUE NAME</h2>
+            <input type="text" id="true-name-input" placeholder="True Name..."
+                style="width: 220px; text-align: center;" onkeydown="if(event.key==='Enter') saveTrueName()">
+            <div style="margin-top: 20px; display: flex; justify-content: center; gap: 12px;">
+                <button onclick="saveTrueName()">[SAVE]</button>
+                <button onclick="closeTrueNameModal()">[CANCEL]</button>
+            </div>
+        </div>
+    </div>
+
     <!-- CHANNEL SPECIALTIES CONFIRMATION MODAL -->
     <div id="borrow-modal" class="modal-overlay">
         <div class="modal-content wiggle">
@@ -899,7 +1064,11 @@
         <!-- Top Middle: Player Name / Role Display -->
         <div class="header-center-col">
             <div id="player-name-display" class="header-role hidden">
-                <span id="player-name-label">VOICE NAME</span>
+                <span id="player-name-label" class="glitch-container" data-text="VOICE NAME">
+                    <span class="artifact-left">▓░</span>
+                    <span class="name-text-node">VOICE NAME</span>
+                    <span class="artifact-right">§0x</span>
+                </span>
             </div>
             <div id="gm-role-header-label" class="header-role hidden">
                 <span id="role-display-label">GM MODE</span>
@@ -935,7 +1104,9 @@
 
             <!-- MIDDLE OF SCREEN: PLAYER IN CONTROL & ROLL INDICATOR -->
             <div class="controller-center-box wiggle">
-                <div id="center-controller-name" class="controller-name">NO ONE IS CURRENTLY IN CONTROL</div>
+                <div id="center-controller-name" class="controller-name-container">
+                    <div class="controller-single-center">NO ONE IS CURRENTLY IN CONTROL</div>
+                </div>
 
                 <!-- SHARED PUBLIC D6 ROLL STATUS BANNER (CENTERED IN MIDDLE OF SCREEN) -->
                 <div id="shared-roll-banner" class="shared-roll-banner wiggle hidden">
@@ -979,13 +1150,13 @@
                 </div>
 
                 <div class="gm-control-panel wiggle">
-                    <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                         <label style="font-size: 0.9rem;">CONTROL:</label>
                         <select id="gm-active-controller-select"></select>
                         <button onclick="gmSetController()">[SET CONTROL]</button>
                     </div>
 
-                    <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+                    <div style="display: flex; gap: 8px 12px; flex-wrap: wrap; justify-content: center;">
                         <button onclick="gmGiveUnattunedEnergy()">[+1 UNATTUNED ENERGY]</button>
                         <button onclick="gmPromptBids()">[PROMPT FOR BIDS]</button>
                         <button onclick="gmCloseBids()">[CLOSE BIDS]</button>
@@ -1033,11 +1204,12 @@
 
         let voiceEditMode = 'ADD'; // 'ADD' or 'RENAME'
         let editingVoiceKey = null;
+        let editingTrueNameVoiceKey = null;
 
         let stabilityModalTargetKey = null;
         let pendingBorrowTargetKey = null;
 
-        // GM Suggestions Editing & Folder State (Folders start collapsed by default)
+        // GM Suggestions Editing & Folder State
         let isEditingSpecs = false;
         let isEditingImps = false;
         let expandedFolders = new Set();
@@ -1057,11 +1229,11 @@
         let isRollingLocal = false;
 
         const defaultVoices = {
-            "voice_1": { name: "Voice 1", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
-            "voice_2": { name: "Voice 2", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
-            "voice_3": { name: "Voice 3", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
-            "voice_4": { name: "Voice 4", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
-            "voice_5": { name: "Voice 5", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] }
+            "voice_1": { playerName: "Voice 1", name: "Voice 1", displayName: "", trueName: "", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
+            "voice_2": { playerName: "Voice 2", name: "Voice 2", displayName: "", trueName: "", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
+            "voice_3": { playerName: "Voice 3", name: "Voice 3", displayName: "", trueName: "", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
+            "voice_4": { playerName: "Voice 4", name: "Voice 4", displayName: "", trueName: "", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] },
+            "voice_5": { playerName: "Voice 5", name: "Voice 5", displayName: "", trueName: "", energy: 10, stability: 0, color: "#ffffff", bid: 0, bidSubmitted: false, specialties: [], impulses: [] }
         };
 
         const defaultSuggestedSpecialties = [
@@ -1079,6 +1251,78 @@
             { id: "fold_astral_imp", name: "Astral Plane", color: "#cc66ff", items: ["Contemplate the infinite", "Seek hidden truths", "Observe without intervening"] },
             { id: "fold_general_imp", name: "General Impulses", color: "#ffffff", items: ["Touch strange magic artifacts", "Speak in ominous riddles", "Eat whatever is nearby"] }
         ];
+
+        // Global interval timer for True Name glitch swap with PRE-GLITCH artifact timing
+        let isGlitchingState = false;
+        setInterval(() => {
+            isGlitchingState = !isGlitchingState;
+            triggerPreGlitchSequence();
+        }, 5000);
+
+        // Helper check: only glitch if a voice has a True Name set and is awakened
+        function canGlitchVoice(vData) {
+            if (!vData) return false;
+            const trueName = vData.trueName ? vData.trueName.trim() : "";
+            const isAwakened = (vData.stability ?? 0) >= 10 && vData.ascendedConfigured;
+            return trueName !== "" && isAwakened;
+        }
+
+        function triggerPreGlitchSequence() {
+            // Check eligibility for Header Voice
+            let glitchHeader = false;
+            if (!isGM && activeRoleKey && localData.voices && localData.voices[activeRoleKey]) {
+                if (canGlitchVoice(localData.voices[activeRoleKey])) {
+                    glitchHeader = true;
+                }
+            }
+
+            // Check eligibility for Center Controller Voice
+            let glitchCenter = false;
+            const ctrlKey = localData.controllerKey;
+            if (ctrlKey && ctrlKey !== 'NONE' && localData.voices && localData.voices[ctrlKey]) {
+                if (canGlitchVoice(localData.voices[ctrlKey])) {
+                    glitchCenter = true;
+                }
+            }
+
+            const headerEl = document.querySelector('#player-name-display .glitch-container');
+            const centerEl = document.querySelector('#center-controller-name .glitch-container');
+
+            // Phase 1: Glitch & Artifacts START 200ms BEFORE actual text swap occurs ONLY for eligible containers
+            if (glitchHeader && headerEl) headerEl.classList.add('glitch-active');
+            if (glitchCenter && centerEl) centerEl.classList.add('glitch-active');
+
+            setTimeout(() => {
+                // Phase 2: Actual Text Value swaps mid-glitch
+                syncViewWithData();
+
+                // Phase 3: Glitch artifacts rumble for 250ms more, then clear cleanly
+                setTimeout(() => {
+                    if (headerEl) headerEl.classList.remove('glitch-active');
+                    if (centerEl) centerEl.classList.remove('glitch-active');
+                }, 250);
+            }, 200);
+        }
+
+        // Helper function to resolve current active name
+        function getEffectiveVoiceName(vData) {
+            if (!vData) return "VOICE";
+
+            const playerName = vData.playerName || vData.name || "VOICE";
+            const displayName = vData.displayName || (vData.ascendedConfigured ? vData.name : "");
+            const trueName = vData.trueName || "";
+            const isAwakened = (vData.stability ?? 0) >= 10 && vData.ascendedConfigured;
+
+            if (isAwakened && trueName && isGlitchingState) {
+                return trueName;
+            }
+
+            if (isAwakened && displayName) {
+                return displayName;
+            }
+
+            return playerName;
+        }
 
         // Color picker synchronization in Ascension Modal
         document.addEventListener('DOMContentLoaded', () => {
@@ -1126,18 +1370,18 @@
             const voices = localData.voices || {};
             Object.keys(voices).forEach(vKey => {
                 const vData = voices[vKey] || {};
-                const vName = vData.name || vKey;
+                const effectiveName = getEffectiveVoiceName(vData);
                 const occ = vData.occupiedBy;
                 const isOccupied = occ && occ !== myClientId;
                 const isAscended = (vData.stability ?? 0) >= 10 && vData.ascendedConfigured && vData.color;
 
                 const btn = document.createElement('button');
                 if (isOccupied) {
-                    btn.innerText = `[${vName.toUpperCase()} - TAKEN]`;
+                    btn.innerText = `[${effectiveName.toUpperCase()} - TAKEN]`;
                     btn.disabled = true;
                 } else {
-                    btn.innerText = `[${vName.toUpperCase()}]`;
-                    btn.onclick = () => choosePlayerRole(vKey, vName);
+                    btn.innerText = `[${effectiveName.toUpperCase()}]`;
+                    btn.onclick = () => choosePlayerRole(vKey, effectiveName);
                 }
 
                 if (isAscended) {
@@ -1225,21 +1469,32 @@
             const biddingActive = !!localData.biddingActive;
             const rollPrompt = localData.rollPrompt || { active: false, targetVoiceKey: null, targetVoiceName: null, result: null };
 
-            const centerLabel = document.getElementById('center-controller-name');
-            if (centerLabel) {
+            // STATIONARY ALIGNMENT TRICK FOR "___ IS IN CONTROL"
+            const centerContainer = document.getElementById('center-controller-name');
+            if (centerContainer) {
                 if (activeRoleKey && !isGM && rawControllerKey === activeRoleKey) {
-                    centerLabel.innerText = "YOU ARE CURRENTLY IN CONTROL";
-                    centerLabel.style.color = "#ffffff";
+                    centerContainer.innerHTML = `<div class="controller-single-center">YOU ARE CURRENTLY IN CONTROL</div>`;
+                    centerContainer.style.color = "#ffffff";
                 } else if (rawControllerKey !== 'NONE' && localData.voices && localData.voices[rawControllerKey]) {
                     const vData = localData.voices[rawControllerKey];
-                    const vName = (vData && vData.name) ? vData.name : rawControllerKey;
+                    const effectiveName = getEffectiveVoiceName(vData).toUpperCase();
                     const isAscended = vData && vData.stability >= 10 && vData.ascendedConfigured;
                     const vColor = (isAscended && vData.color) ? vData.color : '#ffffff';
-                    centerLabel.innerText = `${vName.toUpperCase()} IS CURRENTLY IN CONTROL`;
-                    centerLabel.style.color = vColor;
+                    
+                    centerContainer.innerHTML = `
+                        <div class="controller-left-side">
+                            <span class="glitch-container" data-text="${escapeHtml(effectiveName)}">
+                                <span class="artifact-left">▓░</span>
+                                ${escapeHtml(effectiveName)}
+                                <span class="artifact-right">§0x</span>
+                            </span>
+                        </div>
+                        <div class="controller-right-side">IS CURRENTLY IN CONTROL</div>
+                    `;
+                    centerContainer.style.color = vColor;
                 } else {
-                    centerLabel.innerText = "NO ONE IS CURRENTLY IN CONTROL";
-                    centerLabel.style.color = "#ffffff";
+                    centerContainer.innerHTML = `<div class="controller-single-center">NO ONE IS CURRENTLY IN CONTROL</div>`;
+                    centerContainer.style.color = "#ffffff";
                 }
             }
 
@@ -1303,8 +1558,10 @@
 
             const nameLabel = document.getElementById('player-name-label');
             if (nameLabel) {
-                const currentName = vData.name || activeRoleName || '';
-                nameLabel.innerText = currentName.toUpperCase();
+                const effectiveName = getEffectiveVoiceName(vData).toUpperCase();
+                nameLabel.setAttribute('data-text', effectiveName);
+                const textNode = nameLabel.querySelector('.name-text-node');
+                if (textNode) textNode.innerText = effectiveName;
                 nameLabel.style.color = displayColor;
             }
 
@@ -1476,7 +1733,7 @@
                 const vData = voices[vKey] || {};
                 if ((vData.stability ?? 0) >= 10 && vData.ascendedConfigured) {
                     const vColor = vData.color || '#ffffff';
-                    const vName = vData.name || vKey;
+                    const vName = getEffectiveVoiceName(vData);
                     const specs = vData.specialties || [];
 
                     if (specs.length > 0) {
@@ -1605,7 +1862,7 @@
         function promptStabilityAscension(vKey, vData) {
             stabilityModalTargetKey = vKey;
             const initColor = vData.color || '#ffffff';
-            document.getElementById('ascend-name-input').value = vData.name || '';
+            document.getElementById('ascend-name-input').value = vData.displayName || vData.name || '';
             document.getElementById('ascend-color-input').value = initColor;
             document.getElementById('ascend-color-hex').value = initColor.toUpperCase();
             document.getElementById('ascend-specs-input').value = (vData.specialties || []).join(', ');
@@ -1627,7 +1884,7 @@
             const impsArr = impsRaw.split(',').map(i => i.trim()).filter(i => i.length > 0);
 
             db.ref(`voices/${stabilityModalTargetKey}`).update({
-                name: newName,
+                displayName: newName,
                 color: newColor,
                 specialties: specsArr,
                 impulses: impsArr,
@@ -1637,15 +1894,10 @@
             document.getElementById('stability-modal').classList.remove('visible');
         }
 
-        function gmResetVoice(voiceKey, currentName) {
-            const newName = prompt("Enter new player/voice name:", currentName);
-            if (newName === null) return;
-
-            const trimmedName = newName.trim();
-            if (!trimmedName) return;
-
+        function gmResetVoice(voiceKey) {
             db.ref(`voices/${voiceKey}`).update({
-                name: trimmedName,
+                displayName: "",
+                trueName: "",
                 color: '#ffffff',
                 stability: 0,
                 ascendedConfigured: false,
@@ -1792,7 +2044,7 @@
             const voices = localData.voices || {};
             Object.keys(voices).forEach(vKey => {
                 const vData = voices[vKey] || {};
-                const vName = vData.name || vKey;
+                const vName = getEffectiveVoiceName(vData);
                 const opt = document.createElement('option');
                 opt.value = vKey;
                 opt.innerText = vName;
@@ -1806,7 +2058,11 @@
 
             Object.keys(voices).forEach(vKey => {
                 const vData = voices[vKey] || {};
-                const vName = vData.name || vKey;
+                const vPlayerName = vData.playerName || vData.name || vKey;
+                const vDisplayName = vData.displayName || '';
+                const vTrueName = vData.trueName || '';
+                const effectiveName = getEffectiveVoiceName(vData);
+
                 const energyVal = vData.energy ?? 10;
                 const stabilityVal = vData.stability ?? 0;
                 const isAscended = stabilityVal >= 10 && vData.ascendedConfigured;
@@ -1862,11 +2118,16 @@
 
                 card.innerHTML = `
           <div class="gm-voice-header">
-            <span style="font-weight: bold; font-size: 1.1rem; color: ${vColor};">${escapeHtml(vName.toUpperCase())}</span>
-            <div>
-              <button onclick="openRenameVoiceModal('${vKey}', '${escapeHtml(vName)}')" style="font-size: 0.75rem; padding: 2px 6px;">RENAME</button>
-              ${stabilityVal >= 10 ? `<button onclick="gmResetVoice('${vKey}', '${escapeHtml(vName)}')" style="font-size: 0.75rem; padding: 2px 6px; color: ${vColor}; border-color:${vColor}; margin-left: 4px;">RESET</button>` : ''}
+            <span style="font-weight: bold; font-size: 1.05rem; color: ${vColor}; word-break: break-word;">${escapeHtml(effectiveName.toUpperCase())}</span>
+            <div class="gm-card-actions">
+              <button onclick="openRenameVoiceModal('${vKey}', '${escapeHtml(vPlayerName)}')" class="gm-sm-btn">RENAME</button>
+              <button onclick="openTrueNameModal('${vKey}', '${escapeHtml(vTrueName)}')" class="gm-sm-btn">TRUE NAME</button>
+              ${stabilityVal >= 10 ? `<button onclick="gmResetVoice('${vKey}')" class="gm-sm-btn" style="color: ${vColor}; border-color:${vColor};">RESET</button>` : ''}
             </div>
+          </div>
+
+          <div class="sub-text" style="font-size: 0.72rem; opacity: 0.75; line-height: 1.3;">
+            PLAYER: ${escapeHtml(vPlayerName)}${vDisplayName ? ` | FAKE: ${escapeHtml(vDisplayName)}` : ''}${vTrueName ? ` | TRUE: ${escapeHtml(vTrueName)}` : ''}
           </div>
 
           <div style="display: flex; align-items: center; justify-content: space-between; margin: 4px 0;">
@@ -1957,7 +2218,6 @@
                 const folderColor = folder.color || '#ffffff';
                 const items = Array.isArray(folder.items) ? folder.items : (folder.items ? Object.values(folder.items) : []);
                 
-                // All options start COLLAPSED by default (unless expanded explicitly)
                 const isExpanded = expandedFolders.has(folderId);
 
                 const folderCard = document.createElement('div');
@@ -2013,7 +2273,7 @@
                         gmMoveFolder(category, folderIdx, 1);
                     };
 
-                    // Group Color Picker Container with Editable/Copyable Hex Text Field
+                    // Group Color Picker Container
                     const colorContainer = document.createElement('div');
                     colorContainer.style.display = 'flex';
                     colorContainer.style.alignItems = 'center';
@@ -2036,7 +2296,6 @@
                     hexInput.title = 'Copy/Paste Hex Color Code';
                     hexInput.onclick = (e) => e.stopPropagation();
 
-                    // Sync text input to color swatch & Firebase on change/blur
                     const applyHexChange = (e) => {
                         let val = hexInput.value.trim();
                         if (!val.startsWith('#')) val = '#' + val;
@@ -2097,7 +2356,7 @@
 
                 folderCard.appendChild(folderHeader);
 
-                // Folder Items List (only rendered if expanded)
+                // Folder Items List
                 if (isExpanded) {
                     const itemsList = document.createElement('div');
                     itemsList.className = 'folder-items-list';
@@ -2135,7 +2394,6 @@
                         itemsList.appendChild(itemEl);
                     });
 
-                    // Add new item row inside folder when in Edit mode
                     if (isEditing) {
                         const addRow = document.createElement('div');
                         addRow.style.display = 'flex';
@@ -2354,7 +2612,7 @@
             }
 
             const vData = localData.voices[currentControlKey] || {};
-            const vName = vData.name || currentControlKey;
+            const vName = getEffectiveVoiceName(vData);
 
             db.ref('rollPrompt').set({
                 active: true,
@@ -2445,7 +2703,10 @@
             if (voiceEditMode === 'ADD') {
                 const newKey = 'voice_' + Date.now();
                 db.ref(`voices/${newKey}`).set({
+                    playerName: val,
                     name: val,
+                    displayName: "",
+                    trueName: "",
                     energy: 10,
                     stability: 0,
                     color: '#ffffff',
@@ -2455,10 +2716,32 @@
                     impulses: []
                 });
             } else if (voiceEditMode === 'RENAME' && editingVoiceKey) {
-                db.ref(`voices/${editingVoiceKey}/name`).set(val);
+                db.ref(`voices/${editingVoiceKey}`).update({
+                    playerName: val,
+                    name: val
+                });
             }
 
             closeVoiceEditModal();
+        }
+
+        function openTrueNameModal(vKey, currentTrueName) {
+            editingTrueNameVoiceKey = vKey;
+            document.getElementById('true-name-input').value = currentTrueName || '';
+            document.getElementById('true-name-modal').classList.add('visible');
+            setTimeout(() => document.getElementById('true-name-input').focus(), 100);
+        }
+
+        function closeTrueNameModal() {
+            document.getElementById('true-name-modal').classList.remove('visible');
+        }
+
+        function saveTrueName() {
+            const val = document.getElementById('true-name-input').value.trim();
+            if (editingTrueNameVoiceKey) {
+                db.ref(`voices/${editingTrueNameVoiceKey}/trueName`).set(val);
+            }
+            closeTrueNameModal();
         }
 
         function escapeHtml(str) {
